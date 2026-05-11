@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ремонт">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#111706">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg width='64' height='64' viewBox='0 0 64 64' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='64' height='64' rx='16' fill='%23111706'/%3E%3Cpath d='M18 38.5 32 17l14 21.5H35.5V48h-7v-9.5H18Z' fill='%23a5ee30'/%3E%3Cpath d='M22 43h20' stroke='%23f5f5ee' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" sizes="144x144" href="/assets/images/apple-icon-144x144.png">
+<link rel="icon" type="image/png" sizes="144x144" href="/assets/images/android-icon-144x144.png">
+<link rel="manifest" href="/assets/manifest.json">
+<meta name="msapplication-TileColor" content="#111706">
+<meta name="msapplication-TileImage" content="/assets/images/ms-icon-144x144.png">
+
+<title>Ремонт — трекер витрат</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #111706;
+    --surface: #20221d;
+    --surface2: #282b24;
+    --surface3: #171d0b;
+    --border: rgba(233, 255, 164, .17);
+    --text: #f5f5ee;
+    --muted: #a5a89d;
+    --accent: #a5ee30;
+    --accent-light: rgba(165, 238, 48, .14);
+    --accent2: #ff9a8c;
+    --accent2-light: rgba(255, 154, 140, .16);
+    --shadow: 0 22px 60px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.035);
+    --radius: 18px;
+    --radius-sm: 14px;
+  }
+
+  body {
+    font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background:
+      radial-gradient(circle at 15% -10%, rgba(165, 238, 48, .13), transparent 30%),
+      linear-gradient(180deg, #222914 0%, var(--bg) 42%, #090d04 100%);
+    color: var(--text);
+    min-height: 100vh;
+    color-scheme: dark;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* ── AUTH SCREEN ── */
+  #auth-screen {
+    min-height: 100vh;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+  }
+  .auth-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    padding: 36px 32px;
+    width: 100%;
+    max-width: 380px;
+  }
+  .auth-icon { font-size: 36px; margin-bottom: 12px; }
+  .auth-card h2 { font-size: 22px; font-weight: 800; margin-bottom: 4px; letter-spacing: 0; }
+  .auth-card .auth-subtitle { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+  .auth-switch {
+    margin-top: 18px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .auth-switch button {
+    color: var(--accent);
+    cursor: pointer;
+    font-weight: 600;
+    background: none;
+    border: none;
+    font-family: inherit;
+    font-size: 13px;
+    padding: 0;
+  }
+  .auth-switch button:hover { text-decoration: underline; }
+  .auth-group { margin-bottom: 16px; }
+  .auth-group label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .auth-group input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    color: var(--text);
+    background: #151812;
+    transition: border-color .15s, box-shadow .15s, background .15s;
+  }
+  .auth-group input:focus { border-color: rgba(165,238,48,.7); box-shadow: 0 0 0 4px var(--accent-light); }
+  .btn-auth {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent);
+    color: #101507;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    margin-top: 4px;
+    transition: opacity .15s, transform .1s, box-shadow .15s;
+    box-shadow: 0 10px 26px rgba(165,238,48,.18);
+  }
+  .btn-auth:hover { opacity: .88; }
+  .btn-auth:disabled { opacity: .5; cursor: not-allowed; }
+  .auth-error {
+    background: var(--accent2-light);
+    color: var(--accent2);
+    border-radius: var(--radius-sm);
+    padding: 10px 13px;
+    font-size: 13px;
+    margin-top: 14px;
+    display: none;
+  }
+  .auth-error.show { display: block; }
+
+  /* ── APP ── */
+  #app {
+    display: none;
+    padding: 34px 16px 70px;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    max-width: 900px;
+    margin: 0 auto 26px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .header-icon {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 999px;
+    background: #0d1205;
+    border: 1px solid var(--border);
+    font-size: 25px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .header h1 { font-size: 24px; font-weight: 800; letter-spacing: 0; }
+  .header p { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .btn-logout {
+    margin-left: auto;
+    padding: 7px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: #0d1205;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text);
+    font-family: inherit;
+    white-space: nowrap;
+    transition: all .15s;
+    flex-shrink: 0;
+  }
+  .btn-logout:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── STATS ── */
+  .stats {
+    max-width: 900px;
+    margin: 0 auto 24px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+  }
+  .stat-card.accent {
+    background: linear-gradient(135deg, #a5ee30 0%, #82c922 100%);
+    border-color: rgba(165,238,48,.7);
+  }
+  .stat-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .stat-card.accent .stat-label { color: rgba(17,23,6,.65); }
+  .stat-value { font-size: 30px; font-weight: 800; letter-spacing: 0; color: var(--text); }
+  .stat-card.accent .stat-value { color: #111706; }
+  .stat-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .stat-card.accent .stat-sub { color: rgba(17,23,6,.58); }
+
+  /* ── FORM ── */
+  .form-wrap {
+    max-width: 900px;
+    margin: 0 auto 24px;
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .form-header {
+    padding: 18px 22px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .form-header span { font-weight: 800; font-size: 18px; color: var(--text); }
+  .form-body { padding: 18px 22px 22px; }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 12px;
+    align-items: start;
+  }
+  .form-group { min-width: 0; }
+  .form-group label {
+    display: block;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  .form-group input,
+  .form-group select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    background: #151812;
+    color: var(--text);
+    transition: border-color .15s, box-shadow .15s, background .15s;
+    outline: none;
+    font-family: inherit;
+    min-width: 0;
+  }
+  .form-group select {
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m7 10 5 5 5-5' stroke='%23f5f5ee' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-position: right 14px center;
+    background-repeat: no-repeat;
+    background-size: 18px 18px;
+    padding-right: 44px;
+  }
+  .form-group input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+    color-scheme: dark;
+    background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 2v4M16 2v4M3.5 9.5h17M5.5 5h13A2.5 2.5 0 0 1 21 7.5v11A2.5 2.5 0 0 1 18.5 21h-13A2.5 2.5 0 0 1 3 18.5v-11A2.5 2.5 0 0 1 5.5 5Z' stroke='%23f5f5ee' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-position: right 14px center;
+    background-repeat: no-repeat;
+    background-size: 18px 18px;
+    min-width: 0;
+    padding-right: 24px;
+    height: 44px;
+    line-height: 1.2;
+  }
+  .form-group input[type="date"]::-webkit-date-and-time-value {
+    text-align: left;
+  }
+  .form-group input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0;
+  }
+  .form-group input:focus,
+  .form-group select:focus { border-color: rgba(165,238,48,.75); box-shadow: 0 0 0 4px var(--accent-light); background-color: #181c13; }
+  .form-group input::placeholder { color: #686d61; }
+
+.rate-hint { font-size: 11px; color: var(--muted); margin-top: 5px; }
+  .rate-hint a { color: var(--accent); cursor: pointer; text-decoration: none; }
+
+  .btn-add {
+    background: var(--accent);
+    color: #101507;
+    border: none;
+    padding: 13px 22px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    width: 100%;
+    transition: opacity .15s, transform .1s, box-shadow .15s;
+    font-family: inherit;
+    margin-top: 16px;
+    box-shadow: 0 12px 30px rgba(165,238,48,.18);
+  }
+  .btn-add:hover { opacity: .88; }
+  .btn-add:active { transform: scale(.98); }
+  .btn-add:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* ── FILTERS ── */
+  .filters {
+    max-width: 900px;
+    margin: 0 auto 16px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filter-btn {
+    padding: 8px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: #111609;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all .15s;
+    font-family: inherit;
+  }
+  .filter-btn.active,
+  .filter-btn:hover { border-color: var(--accent); color: #101507; background: var(--accent); }
+  .sort-select {
+    margin-left: auto;
+    padding: 6px 44px 6px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background-color: #111609;
+    background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m7 10 5 5 5-5' stroke='%23f5f5ee' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-position: right 14px center;
+    background-repeat: no-repeat;
+    background-size: 18px 18px;
+    font-size: 12px;
+    color: var(--text);
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* ── TABLE DESKTOP ── */
+  .table-wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: var(--surface2); }
+  thead th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--muted);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  thead th.right { text-align: right; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(165,238,48,.055); }
+  tbody tr.expense-new { animation: rowNew .9s ease; }
+  td { padding: 13px 16px; font-size: 14px; vertical-align: middle; }
+  td.right { text-align: right; }
+  td.muted { color: var(--muted); font-size: 13px; }
+
+  .cat-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .cat-badge.mat   { background: rgba(255, 188, 90, .16); color: #ffc36b; }
+  .cat-badge.work  { background: rgba(145, 166, 255, .16); color: #aebcff; }
+  .cat-badge.furn  { background: rgba(255, 142, 190, .16); color: #ffacd0; }
+  .cat-badge.tech  { background: rgba(92, 221, 198, .16); color: #80ead8; }
+  .cat-badge.other { background: rgba(165, 238, 48, .15); color: var(--accent); }
+
+  .amount-uah { font-weight: 600; color: var(--text); }
+  .amount-eur { color: var(--accent); font-weight: 700; }
+  .rate-tag {
+    font-size: 11px;
+    color: var(--muted);
+    background: #151812;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+  }
+
+  .btn-del {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #777c70;
+    font-size: 16px;
+    padding: 4px 6px;
+    border-radius: 6px;
+    transition: all .15s;
+    line-height: 1;
+  }
+  .btn-del:hover { color: var(--accent2); background: var(--accent2-light); }
+
+  tfoot tr { background: var(--surface2); border-top: 2px solid var(--border); }
+  tfoot td { padding: 14px 16px; font-weight: 700; font-size: 15px; }
+  .total-uah { color: var(--text); }
+  .total-eur { color: var(--accent); }
+
+  /* ── MOBILE CARDS ── */
+  .mobile-list { display: none; }
+  .expense-card {
+    border-bottom: 1px solid var(--border);
+    padding: 16px;
+    position: relative;
+    background: var(--surface);
+    touch-action: pan-y;
+    transition: transform .18s ease, background .18s ease;
+    will-change: transform;
+  }
+  .expense-card::after {
+    content: "Видалити";
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: 92px;
+    display: grid;
+    place-items: center;
+    background: var(--accent2-light);
+    color: var(--accent2);
+    font-size: 12px;
+    font-weight: 800;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: opacity .18s ease;
+  }
+  .expense-card.swiping {
+    transform: translateX(-82px);
+    background: #252920;
+  }
+  .expense-card.swiping::after {
+    opacity: 1;
+    transform: translateX(82px);
+  }
+  .expense-card.expense-new { animation: cardNew .9s ease; }
+  .expense-card:last-child { border-bottom: none; }
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .card-name { font-weight: 800; font-size: 16px; flex: 1; }
+  .card-date { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .card-amounts { text-align: right; }
+  .card-uah { font-size: 18px; font-weight: 800; }
+  .card-eur { font-size: 14px; color: var(--accent); font-weight: 700; }
+  .card-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+  .filter-btn.filter-pulse { animation: filterPulse .45s ease; }
+
+  /* ── LOADING / EMPTY ── */
+  .loading-state {
+    padding: 16px;
+    min-height: max(520px, calc(100vh - 260px));
+  }
+  .skeleton-card {
+    min-height: 118px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    padding: 16px 0;
+  }
+  .skeleton-card:last-child { border-bottom: none; }
+  .skeleton-line {
+    height: 12px;
+    border-radius: 999px;
+    background: #30342b;
+    margin: 14px 0 0;
+    overflow: hidden;
+    position: relative;
+  }
+  .skeleton-line.short { width: 42%; }
+  .skeleton-line.medium { width: 64%; }
+  .skeleton-line.tiny { width: 28%; }
+  .skeleton-line.right {
+    width: 26%;
+    margin-left: auto;
+    margin-top: -12px;
+  }
+  .skeleton-card.tall {
+    min-height: 156px;
+  }
+  .skeleton-line::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(245,245,238,.13), transparent);
+    transform: translateX(-100%);
+    animation: shimmer 1.15s infinite;
+  }
+  @keyframes shimmer { to { transform: translateX(100%); } }
+  @keyframes cardNew {
+    0% { transform: translateY(-8px); background: rgba(165,238,48,.18); }
+    55% { background: rgba(165,238,48,.12); }
+    100% { transform: translateY(0); background: var(--surface); }
+  }
+  @keyframes rowNew {
+    0% { background: rgba(165,238,48,.18); }
+    100% { background: transparent; }
+  }
+  @keyframes filterPulse {
+    0% { box-shadow: 0 0 0 0 rgba(165,238,48,.35); }
+    100% { box-shadow: 0 0 0 10px rgba(165,238,48,0); }
+  }
+  .empty-state { padding: 60px 20px; text-align: center; color: var(--muted); }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #a5ee30;
+    color: #101507;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    transition: transform .25s ease;
+    z-index: 999;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  .money-rain {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 998;
+  }
+  .money-particle {
+    position: absolute;
+    top: -36px;
+    left: var(--x);
+    color: var(--accent);
+    font-size: var(--size);
+    font-weight: 900;
+    line-height: 1;
+    text-shadow: 0 0 16px rgba(165,238,48,.28);
+    opacity: 0;
+    animation: moneyFall var(--duration) cubic-bezier(.18,.72,.28,1) forwards;
+    animation-delay: var(--delay);
+    transform: translate3d(0, -40px, 0) rotate(0deg);
+  }
+  .money-particle.alt {
+    color: #f5f5ee;
+    text-shadow: 0 0 16px rgba(245,245,238,.16);
+  }
+  @keyframes moneyFall {
+    0% {
+      opacity: 0;
+      transform: translate3d(0, -40px, 0) rotate(0deg);
+    }
+    12% { opacity: .95; }
+    100% {
+      opacity: 0;
+      transform: translate3d(var(--drift), calc(100vh + 90px), 0) rotate(var(--spin));
+    }
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 680px) {
+    #app { padding: 16px 12px 60px; }
+    .stats {
+      position: sticky;
+      top: 8px;
+      z-index: 50;
+      gap: 8px;
+      padding: 10px 0;
+      isolation: isolate;
+    }
+    .stats::before {
+      content: "";
+      position: absolute;
+      inset: -12px -12px -10px;
+      z-index: -1;
+      box-shadow: 0 18px 28px rgba(0,0,0,.34);
+      backdrop-filter: blur(22px) saturate(120%);
+      -webkit-backdrop-filter: blur(22px) saturate(120%);
+      pointer-events: none;
+    }
+    .stat-value { font-size: 19px; }
+    .stat-card { padding: 12px; border-radius: 14px; }
+    .stat-label { font-size: 9px; margin-bottom: 4px; }
+    .stat-sub { display: none; }
+    .form-grid { grid-template-columns: 1fr 1fr; }
+    .form-grid .form-group[style*="span 2"] { grid-column: span 2 / span 2; }
+    .desktop-table { display: none; }
+    .mobile-list { display: block; }
+    .header h1 { font-size: 18px; }
+    .loading-state { min-height: max(620px, calc(100vh - 180px)); }
+  }
+  @media (max-width: 480px) {
+    .stats { grid-template-columns: 1fr 1fr; }
+    .stat-value { font-size: 16px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-grid .form-group { grid-column: span 1 / span 1 !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ AUTH SCREEN ══ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-icon">🏗️</div>
+    <h2 id="auth-title">Увійти</h2>
+    <p class="auth-subtitle">Керуй витратами на ремонт з будь-якого пристрою</p>
+    <div class="auth-group">
+      <label>Email</label>
+      <input type="email" id="auth-email" placeholder="you@example.com">
+    </div>
+    <div class="auth-group">
+      <label>Пароль</label>
+      <input type="password" id="auth-password" placeholder="••••••••">
+    </div>
+    <button class="btn-auth" id="auth-btn">Увійти</button>
+    <div class="auth-error" id="auth-error"></div>
+    <div class="auth-switch">
+      <span id="auth-switch-text">Немає акаунту?</span>
+      <button type="button" id="auth-switch-link">Зареєструватись</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app">
+  <div class="header">
+    <div class="header-icon">🏗️</div>
+    <div>
+      <h1>Трекер витрат на ремонт</h1>
+      <p id="today-info">Курс євро сьогодні: 1 € = 51.62 ₴ · 2026-05-07</p>
+    </div>
+    <button class="btn-logout" id="btn-logout">Вийти</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-label">Всього витрачено, ₴</div>
+      <div class="stat-value" id="total-uah">₴ 0</div>
+      <div class="stat-sub" id="items-count">0 позицій</div>
+    </div>
+    <div class="stat-card accent">
+      <div class="stat-label">Всього витрачено, €</div>
+      <div class="stat-value" id="total-eur">€ 0</div>
+      <div class="stat-sub">кожна витрата — за своїм курсом дня</div>
+    </div>
+  </div>
+
+  <div class="form-wrap">
+    <div class="form-header">
+      <span>Додати витрату</span>
+    </div>
+    <div class="form-body">
+      <div class="form-grid">
+        <div class="form-group" style="grid-column: span 2 / span 2">
+          <label>Назва</label>
+          <input type="text" id="inp-name" placeholder="Наприклад: шпалери, плитка…">
+        </div>
+        <div class="form-group">
+          <label>Сума, ₴</label>
+          <input type="number" id="inp-uah" placeholder="0" min="0" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>Дата</label>
+          <input type="date" id="inp-date">
+        </div>
+        <div class="form-group" style="grid-column: span 2 / span 2">
+          <label>Категорія</label>
+          <select id="inp-cat">
+            <option value="mat">🧱 Матеріали</option>
+            <option value="work">🔨 Роботи</option>
+            <option value="furn">🛋️ Меблі</option>
+            <option value="tech">🔌 Техніка</option>
+            <option value="other">📦 Інше</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column: span 2 / span 2">
+          <label>Курс € / ₴</label>
+          <input type="number" id="inp-rate" placeholder="51.62" step="0.01">
+          <div class="rate-hint">Сьогодні: <strong id="hint-rate">51.62</strong> — <button type="button" id="btn-today-rate" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:11px;padding:0;font-family:inherit;">застосувати</button></div>
+        </div>
+      </div>
+      <button type="button" class="btn-add" id="btn-add" onclick="addExpense()">Додати витрату</button>
+    </div>
+  </div>
+
+  <div class="filters" id="filters">
+    <button class="filter-btn active" data-cat="all">Всі</button>
+    <button class="filter-btn" data-cat="mat">🧱 Матеріали</button>
+    <button class="filter-btn" data-cat="work">🔨 Роботи</button>
+    <button class="filter-btn" data-cat="furn">🛋️ Меблі</button>
+    <button class="filter-btn" data-cat="tech">🔌 Техніка</button>
+    <button class="filter-btn" data-cat="other">📦 Інше</button>
+    <select class="sort-select" id="sort-select">
+      <option value="date-desc">Нові спочатку</option>
+      <option value="date-asc">Старі спочатку</option>
+      <option value="uah-desc">Сума ↓</option>
+      <option value="uah-asc">Сума ↑</option>
+    </select>
+  </div>
+
+  <div class="table-wrap">
+    <div class="desktop-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Дата</th><th>Назва</th><th>Категорія</th>
+            <th class="right">Сума, ₴</th><th class="right">Курс €</th>
+            <th class="right">Сума, €</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+        <tfoot id="table-foot"></tfoot>
+      </table>
+    </div>
+    <div class="mobile-list" id="mobile-list"></div>
+    <div id="list-state"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+const SUPABASE_URL = 'https://ipczlgqegunlhoalllxc.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_iR6694VCan06DUIN_xorvw_xFzwKnhE';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const TODAY_RATE = 51.62;
+const TODAY_DATE = '2026-05-07';
+
+const CAT_MAP = {
+  mat:   { label: 'Матеріали', icon: '🧱', cls: 'mat'  },
+  work:  { label: 'Роботи',    icon: '🔨', cls: 'work' },
+  furn:  { label: 'Меблі',     icon: '🛋️', cls: 'furn' },
+  tech:  { label: 'Техніка',   icon: '🔌', cls: 'tech' },
+  other: { label: 'Інше',      icon: '📦', cls: 'other'},
+};
+
+let expenses = [];
+let currentFilter = 'all';
+let currentSort = 'date-desc';
+let recentlyAddedId = null;
+let recentlyAddedDraft = null;
+let isListLoading = false;
+let isSavingExpense = false;
+const animatedTotals = { uah: 0, eur: 0 };
+const totalAnimationFrames = { uah: null, eur: null };
+
+document.getElementById('inp-date').value = TODAY_DATE;
+document.getElementById('inp-rate').value = TODAY_RATE;
+
+/* ── AUTH ── */
+let authMode = 'login';
+
+function switchTab() {
+  authMode = authMode === 'login' ? 'register' : 'login';
+  const isLogin = authMode === 'login';
+  document.getElementById('auth-title').textContent = isLogin ? 'Увійти' : 'Реєстрація';
+  document.getElementById('auth-btn').textContent = isLogin ? 'Увійти' : 'Зареєструватись';
+  document.getElementById('auth-switch-text').textContent = isLogin ? 'Немає акаунту?' : 'Вже є акаунт?';
+  document.getElementById('auth-switch-link').textContent = isLogin ? 'Зареєструватись' : 'Увійти';
+  document.getElementById('auth-error').classList.remove('show');
+}
+
+async function authSubmit() {
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const btn = document.getElementById('auth-btn');
+  const errEl = document.getElementById('auth-error');
+
+  if (!email || !password) return;
+
+  btn.disabled = true;
+  btn.textContent = '…';
+  errEl.classList.remove('show');
+
+  let error;
+  if (authMode === 'login') {
+    ({ error } = await sb.auth.signInWithPassword({ email, password }));
+  } else {
+    ({ error } = await sb.auth.signUp({ email, password }));
+  }
+
+  btn.disabled = false;
+  btn.textContent = authMode === 'login' ? 'Увійти' : 'Зареєструватись';
+
+  if (error) {
+    errEl.textContent = translateError(error.message);
+    errEl.classList.add('show');
+  } else if (authMode === 'register') {
+    errEl.style.background = 'var(--accent-light)';
+    errEl.style.color = 'var(--accent)';
+    errEl.textContent = '✓ Перевір email для підтвердження реєстрації';
+    errEl.classList.add('show');
+  }
+}
+
+function translateError(msg) {
+  if (msg.includes('Invalid login')) return 'Невірний email або пароль';
+  if (msg.includes('Email not confirmed')) return 'Підтверди email перед входом';
+  if (msg.includes('already registered')) return 'Цей email вже зареєстровано';
+  if (msg.includes('Password should')) return 'Пароль має бути не менше 6 символів';
+  return msg;
+}
+
+async function logout() {
+  await sb.auth.signOut();
+  expenses = [];
+  render();
+}
+
+/* ── INIT ── */
+async function init() {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      showApp();
+      await loadExpenses();
+    } else {
+      showAuth();
+    }
+  } catch (e) {
+    console.error(e);
+    toast('Не вдалося перевірити сесію');
+    showAuth();
+  }
+
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'INITIAL_SESSION') return;
+
+    if (session) {
+      showApp();
+      await loadExpenses();
+    } else {
+      showAuth();
+    }
+  });
+}
+
+function showApp() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+}
+
+function showAuth() {
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+/* ── DATA ── */
+async function loadExpenses() {
+  setListLoading(true);
+  try {
+    const { data, error } = await sb
+      .from('expenses')
+      .select('*')
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      toast('Помилка завантаження 😕');
+      console.error(error);
+      return;
+    }
+
+    expenses = data || [];
+  } catch (e) {
+    toast('Помилка завантаження 😕');
+    console.error(e);
+  } finally {
+    setListLoading(false);
+    render();
+  }
+}
+
+async function addExpense() {
+  if (isSavingExpense) return;
+
+  const name = document.getElementById('inp-name').value.trim();
+  const uah  = normalizeNumber(document.getElementById('inp-uah').value);
+  const date = document.getElementById('inp-date').value;
+  const cat  = document.getElementById('inp-cat').value;
+  const rate = Math.round(normalizeNumber(document.getElementById('inp-rate').value) * 10000) / 10000;
+
+  if (!name) return shake('inp-name', 'Вкажи назву витрати');
+  if (!uah || uah <= 0) return shake('inp-uah', 'Вкажи суму більше 0');
+  if (!date) return shake('inp-date', 'Вкажи дату');
+  if (!rate || rate <= 0) return shake('inp-rate', 'Вкажи курс більше 0');
+
+  const btn = document.getElementById('btn-add');
+  isSavingExpense = true;
+  btn.disabled = true;
+  btn.textContent = 'Зберігаю…';
+
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session?.user) { toast('Сесія закінчилась, увійди знову'); showAuth(); return; }
+
+    const tempId = 'temp-' + Date.now();
+    const newExpense = { user_id: session.user.id, name, uah, date, cat, rate };
+    const { error } = await sb.from('expenses').insert([newExpense]);
+
+    if (error) {
+      toast('Помилка: ' + error.message);
+      console.error(error);
+      return;
+    }
+
+    recentlyAddedId = tempId;
+    recentlyAddedDraft = { name, uah, date, cat, rate };
+    expenses = [{ id: tempId, ...newExpense, created_at: new Date().toISOString() }, ...expenses];
+    document.getElementById('inp-name').value = '';
+    document.getElementById('inp-uah').value  = '';
+    toast('✓ Витрату додано');
+    celebrateMoney();
+    render();
+    btn.disabled = false;
+    btn.textContent = 'Додати витрату';
+    loadExpenses().catch(e => {
+      toast('Витрату додано, але список не оновився');
+      console.error(e);
+    });
+    setTimeout(() => {
+      recentlyAddedId = null;
+      recentlyAddedDraft = null;
+      document.querySelectorAll('.expense-new').forEach(el => el.classList.remove('expense-new'));
+    }, 1000);
+  } catch (e) {
+    toast('Помилка збереження 😕');
+    console.error(e);
+  } finally {
+    isSavingExpense = false;
+    btn.disabled = false;
+    btn.textContent = 'Додати витрату';
+  }
+}
+
+async function deleteExpense(id) {
+  const { error } = await sb.from('expenses').delete().eq('id', id);
+  if (error) { toast('Помилка видалення 😕'); return; }
+  toast('Видалено');
+  await loadExpenses();
+}
+
+/* ── UI HELPERS ── */
+function normalizeNumber(value) {
+  return parseFloat(String(value).replace(',', '.'));
+}
+
+function shake(id, message) {
+  const el = document.getElementById(id);
+  el.style.borderColor = '#e76f51';
+  el.focus();
+  if (message) toast(message);
+  setTimeout(() => el.style.borderColor = '', 1200);
+}
+
+function setTodayRate() {
+  document.getElementById('inp-rate').value = TODAY_RATE;
+}
+
+function setFilter(cat) {
+  currentFilter = cat;
+  render();
+}
+
+function setSort(val) {
+  currentSort = val;
+  render();
+}
+
+function setListLoading(on) {
+  isListLoading = on;
+  const hasRenderedItems =
+    document.getElementById('table-body').children.length > 0 ||
+    document.getElementById('mobile-list').children.length > 0;
+
+  if (on && hasRenderedItems) {
+    document.getElementById('list-state').innerHTML = '';
+    return;
+  }
+
+  if (on) {
+    document.getElementById('table-body').innerHTML = '';
+    document.getElementById('table-foot').innerHTML = '';
+    document.getElementById('mobile-list').innerHTML = '';
+  }
+
+  document.getElementById('list-state').innerHTML = on
+    ? `<div class="loading-state" aria-label="Завантаження">
+        <div class="skeleton-card">
+          <div class="skeleton-line medium"></div>
+          <div class="skeleton-line right"></div>
+          <div class="skeleton-line short"></div>
+        </div>
+        <div class="skeleton-card tall">
+          <div class="skeleton-line short"></div>
+          <div class="skeleton-line right"></div>
+          <div class="skeleton-line medium"></div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-line medium"></div>
+          <div class="skeleton-line right"></div>
+          <div class="skeleton-line tiny"></div>
+        </div>
+        <div class="skeleton-card tall">
+          <div class="skeleton-line medium"></div>
+          <div class="skeleton-line right"></div>
+          <div class="skeleton-line short"></div>
+        </div>
+      </div>`
+    : '';
+}
+
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+function celebrateMoney() {
+  const rain = document.createElement('div');
+  rain.className = 'money-rain';
+  document.body.appendChild(rain);
+
+  const symbols = ['₴', '₴', '₴', '€'];
+  const count = window.matchMedia('(max-width: 680px)').matches ? 34 : 54;
+
+  for (let i = 0; i < count; i++) {
+    const particle = document.createElement('span');
+    particle.className = 'money-particle' + (i % 5 === 0 ? ' alt' : '');
+    particle.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+    particle.style.setProperty('--x', Math.round(Math.random() * 100) + 'vw');
+    particle.style.setProperty('--drift', Math.round((Math.random() - .5) * 180) + 'px');
+    particle.style.setProperty('--spin', Math.round((Math.random() - .5) * 540) + 'deg');
+    particle.style.setProperty('--size', Math.round(16 + Math.random() * 18) + 'px');
+    particle.style.setProperty('--duration', (1.45 + Math.random() * 1.35).toFixed(2) + 's');
+    particle.style.setProperty('--delay', (Math.random() * .5).toFixed(2) + 's');
+    rain.appendChild(particle);
+  }
+
+  setTimeout(() => rain.remove(), 3400);
+}
+
+function getSorted(list) {
+  return [...list].sort((a, b) => {
+    if (currentSort === 'date-desc') return b.date.localeCompare(a.date);
+    if (currentSort === 'date-asc')  return a.date.localeCompare(b.date);
+    if (currentSort === 'uah-desc')  return b.uah - a.uah;
+    if (currentSort === 'uah-asc')   return a.uah - b.uah;
+    return 0;
+  });
+}
+
+function fmt(n) {
+  return Number(n).toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function animateMoney(id, prefix, next, key) {
+  const el = document.getElementById(id);
+  const start = animatedTotals[key] || 0;
+  const diff = next - start;
+  const duration = 520;
+  const started = performance.now();
+
+  if (totalAnimationFrames[key]) {
+    cancelAnimationFrame(totalAnimationFrames[key]);
+    totalAnimationFrames[key] = null;
+  }
+
+  if (Math.abs(diff) < 0.01) {
+    el.textContent = prefix + ' ' + fmt(next);
+    animatedTotals[key] = next;
+    return;
+  }
+
+  function tick(now) {
+    const progress = Math.min((now - started) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const current = start + diff * eased;
+    el.textContent = prefix + ' ' + fmt(current);
+
+    if (progress < 1) {
+      totalAnimationFrames[key] = requestAnimationFrame(tick);
+    } else {
+      animatedTotals[key] = next;
+      el.textContent = prefix + ' ' + fmt(next);
+      totalAnimationFrames[key] = null;
+    }
+  }
+
+  totalAnimationFrames[key] = requestAnimationFrame(tick);
+}
+
+function fmtDate(d) {
+  const [y, m, day] = d.split('-');
+  return `${day}.${m}.${y}`;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function isRecentlyAddedExpense(e) {
+  if (e.id === recentlyAddedId) return true;
+  if (!recentlyAddedDraft) return false;
+
+  return e.name === recentlyAddedDraft.name &&
+    e.date === recentlyAddedDraft.date &&
+    e.cat === recentlyAddedDraft.cat &&
+    Math.abs(Number(e.uah) - recentlyAddedDraft.uah) < 0.01 &&
+    Math.abs(Number(e.rate) - recentlyAddedDraft.rate) < 0.0001;
+}
+
+function render() {
+  const filtered = currentFilter === 'all'
+    ? expenses
+    : expenses.filter(e => e.cat === currentFilter);
+  const sorted = getSorted(filtered);
+
+  const totalUAH = expenses.reduce((s, e) => s + Number(e.uah), 0);
+  const totalEUR = expenses.reduce((s, e) => s + Number(e.uah) / Number(e.rate), 0);
+
+  animateMoney('total-uah', '₴', totalUAH, 'uah');
+  animateMoney('total-eur', '€', totalEUR, 'eur');
+  document.getElementById('items-count').textContent =
+    expenses.length + (expenses.length === 1 ? ' позиція' : expenses.length < 5 ? ' позиції' : ' позицій');
+
+  const stateEl = document.getElementById('list-state');
+  stateEl.innerHTML = '';
+  if (sorted.length === 0) {
+    stateEl.innerHTML = '<div class="empty-state"><div class="icon">🧾</div><p>Поки що жодної витрати.<br>Додайте першу через форму вгорі!</p></div>';
+  }
+
+  // Desktop
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = '';
+  sorted.forEach(e => {
+    const eur = Number(e.uah) / Number(e.rate);
+    const cat = CAT_MAP[e.cat] || CAT_MAP.other;
+    const tr = document.createElement('tr');
+    if (isRecentlyAddedExpense(e)) tr.className = 'expense-new';
+    tr.innerHTML = `
+      <td class="muted">${fmtDate(e.date)}</td>
+      <td><strong>${escHtml(e.name)}</strong></td>
+      <td><span class="cat-badge ${cat.cls}">${cat.icon} ${cat.label}</span></td>
+      <td class="right"><span class="amount-uah">₴ ${fmt(e.uah)}</span></td>
+      <td class="right"><span class="rate-tag">курс: ${e.rate} ₴/€</span></td>
+      <td class="right"><span class="amount-eur">€ ${fmt(eur)}</span></td>
+      <td><button class="btn-del" data-id="${e.id}" title="Видалити">✕</button></td>`;
+    tbody.appendChild(tr);
+  });
+
+  const tfoot = document.getElementById('table-foot');
+  if (sorted.length > 0) {
+    const filtUAH = sorted.reduce((s, e) => s + Number(e.uah), 0);
+    const filtEUR = sorted.reduce((s, e) => s + Number(e.uah) / Number(e.rate), 0);
+    const label = currentFilter === 'all' ? 'Разом' : 'Разом (фільтр)';
+    tfoot.innerHTML = `<tr>
+      <td colspan="3" style="color:var(--muted);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.4px">${label}</td>
+      <td class="right total-uah">₴ ${fmt(filtUAH)}</td>
+      <td></td>
+      <td class="right total-eur">€ ${fmt(filtEUR)}</td>
+      <td></td></tr>`;
+  } else {
+    tfoot.innerHTML = '';
+  }
+
+  // Mobile
+  const ml = document.getElementById('mobile-list');
+  ml.innerHTML = '';
+  sorted.forEach(e => {
+    const eur = Number(e.uah) / Number(e.rate);
+    const cat = CAT_MAP[e.cat] || CAT_MAP.other;
+    const div = document.createElement('div');
+    div.className = 'expense-card' + (isRecentlyAddedExpense(e) ? ' expense-new' : '');
+    div.dataset.id = e.id;
+    div.innerHTML = `
+      <div class="card-top">
+        <div>
+          <div class="card-name">${escHtml(e.name)}</div>
+          <div class="card-date">${fmtDate(e.date)}</div>
+        </div>
+        <div class="card-amounts">
+          <div class="card-uah">₴ ${fmt(e.uah)}</div>
+          <div class="card-eur">€ ${fmt(eur)}</div>
+        </div>
+      </div>
+      <div class="card-meta">
+        <span class="cat-badge ${cat.cls}">${cat.icon} ${cat.label}</span>
+        <span class="rate-tag">курс: ${e.rate} ₴/€</span>
+        <button class="btn-del" data-id="${e.id}" title="Видалити">✕</button>
+      </div>`;
+    ml.appendChild(div);
+  });
+  attachSwipeActions();
+}
+
+function attachSwipeActions() {
+  document.querySelectorAll('.expense-card').forEach(card => {
+    let startX = 0;
+    let startY = 0;
+    let dx = 0;
+    let isSwiping = false;
+
+    card.addEventListener('touchstart', e => {
+      const touch = e.touches[0];
+      startX = touch.clientX;
+      startY = touch.clientY;
+      dx = 0;
+      isSwiping = false;
+    }, { passive: true });
+
+    card.addEventListener('touchmove', e => {
+      const touch = e.touches[0];
+      dx = touch.clientX - startX;
+      const dy = Math.abs(touch.clientY - startY);
+
+      if (Math.abs(dx) > 24 && Math.abs(dx) > dy && dx < 0) {
+        isSwiping = true;
+        card.classList.add('swiping');
+      }
+
+      if (dx > -20) card.classList.remove('swiping');
+    }, { passive: true });
+
+    card.addEventListener('touchend', () => {
+      if (isSwiping && dx < -92 && card.dataset.id) {
+        if (card.dataset.id.startsWith('temp-')) {
+          card.classList.remove('swiping');
+          return;
+        }
+        deleteExpense(Number(card.dataset.id));
+        return;
+      }
+
+      setTimeout(() => card.classList.remove('swiping'), 120);
+    });
+  });
+}
+
+// ── Wire up all event listeners ──
+document.getElementById('auth-switch-link').addEventListener('click', switchTab);
+document.getElementById('auth-btn').addEventListener('click', authSubmit);
+document.getElementById('auth-email').addEventListener('keydown', e => { if (e.key === 'Enter') authSubmit(); });
+document.getElementById('auth-password').addEventListener('keydown', e => { if (e.key === 'Enter') authSubmit(); });
+document.getElementById('btn-logout').addEventListener('click', logout);
+document.getElementById('btn-today-rate').addEventListener('click', setTodayRate);
+document.getElementById('sort-select').addEventListener('change', e => setSort(e.target.value));
+document.getElementById('filters').addEventListener('click', e => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  btn.classList.remove('filter-pulse');
+  void btn.offsetWidth;
+  btn.classList.add('filter-pulse');
+  setFilter(btn.dataset.cat);
+});
+document.querySelector('.table-wrap').addEventListener('click', e => {
+  const btn = e.target.closest('.btn-del');
+  if (!btn?.dataset.id || btn.dataset.id.startsWith('temp-')) return;
+  deleteExpense(Number(btn.dataset.id));
+});
+
+init();
+</script>
+</body>
+</html>
