@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#111706">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg width='64' height='64' viewBox='0 0 64 64' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='64' height='64' rx='16' fill='%23111706'/%3E%3Cpath d='M18 38.5 32 17l14 21.5H35.5V48h-7v-9.5H18Z' fill='%23a5ee30'/%3E%3Cpath d='M22 43h20' stroke='%23f5f5ee' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
-<link rel="apple-touch-icon" sizes="144x144" href="/assets/images/apple-icon-144x144.png">
-<link rel="icon" type="image/png" sizes="144x144" href="/assets/images/android-icon-144x144.png">
-<link rel="manifest" href="/assets/manifest.json">
+<link rel="apple-touch-icon" sizes="144x144" href="assets/images/apple-icon-144x144.png">
+<link rel="icon" type="image/png" sizes="144x144" href="assets/images/android-icon-144x144.png">
+<link rel="manifest" href="assets/manifest.json">
 <meta name="msapplication-TileColor" content="#111706">
-<meta name="msapplication-TileImage" content="/assets/images/ms-icon-144x144.png">
+<meta name="msapplication-TileImage" content="assets/images/ms-icon-144x144.png">
 
 <title>Ремонт — трекер витрат</title>
 <style>
@@ -36,13 +36,21 @@
     --radius-sm: 14px;
   }
 
+  html {
+    background: #090d04;
+    min-height: 100%;
+    overscroll-behavior-y: none;
+  }
+
   body {
     font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background:
       radial-gradient(circle at 15% -10%, rgba(165, 238, 48, .13), transparent 30%),
       linear-gradient(180deg, #222914 0%, var(--bg) 42%, #090d04 100%);
+    background-attachment: fixed;
     color: var(--text);
     min-height: 100vh;
+    overscroll-behavior-y: none;
     color-scheme: dark;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
@@ -163,6 +171,7 @@
   }
   .header h1 { font-size: 24px; font-weight: 800; letter-spacing: 0; }
   .header p { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .btn-refresh,
   .btn-logout {
     margin-left: auto;
     padding: 7px 14px;
@@ -178,7 +187,25 @@
     transition: all .15s;
     flex-shrink: 0;
   }
+  .btn-refresh {
+    margin-left: auto;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    display: none;
+    place-items: center;
+    font-size: 16px;
+  }
+  .btn-logout {
+    margin-left: auto;
+  }
+  .btn-refresh:hover,
   .btn-logout:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-refresh.loading {
+    color: var(--accent);
+    animation: refreshSpin .7s linear infinite;
+  }
+  @keyframes refreshSpin { to { transform: rotate(360deg); } }
 
   /* ── STATS ── */
   .stats {
@@ -227,9 +254,53 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    cursor: pointer;
+    transition: padding .24s ease;
   }
   .form-header span { font-weight: 800; font-size: 18px; color: var(--text); }
-  .form-body { padding: 18px 22px 22px; }
+  .btn-form-toggle {
+    margin-left: auto;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: #151812;
+    color: var(--text);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: transform .16s ease, border-color .16s ease, color .16s ease;
+  }
+  .btn-form-toggle::before {
+    content: "";
+    width: 9px;
+    height: 9px;
+    border-top: 2px solid currentColor;
+    border-left: 2px solid currentColor;
+    transform: translateY(2px) rotate(45deg);
+  }
+  .btn-form-toggle:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .form-body {
+    padding: 18px 22px 22px;
+    max-height: 700px;
+    overflow: hidden;
+    transition: max-height .24s ease, opacity .18s ease, padding .24s ease;
+  }
+  .form-wrap.collapsed .form-body {
+    max-height: 0;
+    opacity: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .form-wrap.collapsed .form-header {
+    padding-bottom: 18px;
+  }
+  .form-wrap.collapsed .btn-form-toggle {
+    transform: rotate(180deg);
+  }
 
   .form-grid {
     display: grid;
@@ -442,32 +513,6 @@
     padding: 16px;
     position: relative;
     background: var(--surface);
-    touch-action: pan-y;
-    transition: transform .18s ease, background .18s ease;
-    will-change: transform;
-  }
-  .expense-card::after {
-    content: "Видалити";
-    position: absolute;
-    inset: 0 0 0 auto;
-    width: 92px;
-    display: grid;
-    place-items: center;
-    background: var(--accent2-light);
-    color: var(--accent2);
-    font-size: 12px;
-    font-weight: 800;
-    opacity: 0;
-    transform: translateX(100%);
-    transition: opacity .18s ease;
-  }
-  .expense-card.swiping {
-    transform: translateX(-82px);
-    background: #252920;
-  }
-  .expense-card.swiping::after {
-    opacity: 1;
-    transform: translateX(82px);
   }
   .expense-card.expense-new { animation: cardNew .9s ease; }
   .expense-card:last-child { border-bottom: none; }
@@ -629,6 +674,8 @@
     .form-grid .form-group[style*="span 2"] { grid-column: span 2 / span 2; }
     .desktop-table { display: none; }
     .mobile-list { display: block; }
+    .btn-refresh { display: grid; }
+    .btn-logout { margin-left: 0; }
     .header h1 { font-size: 18px; }
     .loading-state { min-height: max(620px, calc(100vh - 180px)); }
   }
@@ -673,6 +720,7 @@
       <h1>Трекер витрат на ремонт</h1>
       <p id="today-info">Курс євро сьогодні: 1 € = 51.62 ₴ · 2026-05-07</p>
     </div>
+    <button type="button" class="btn-refresh" id="btn-refresh" title="Оновити дані" aria-label="Оновити дані">↻</button>
     <button class="btn-logout" id="btn-logout">Вийти</button>
   </div>
 
@@ -689,9 +737,10 @@
     </div>
   </div>
 
-  <div class="form-wrap">
+  <div class="form-wrap collapsed" id="expense-form">
     <div class="form-header">
       <span>Додати витрату</span>
+      <button type="button" class="btn-form-toggle" id="btn-form-toggle" aria-label="Розгорнути форму" aria-expanded="false"></button>
     </div>
     <div class="form-body">
       <div class="form-grid">
@@ -767,10 +816,17 @@
 <script>
 const SUPABASE_URL = 'https://ipczlgqegunlhoalllxc.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_iR6694VCan06DUIN_xorvw_xFzwKnhE';
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storageKey: 'renovation-tracker-auth'
+  }
+});
 
 const TODAY_RATE = 51.62;
-const TODAY_DATE = '2026-05-07';
+const TODAY_DATE = getTodayDate();
 
 const CAT_MAP = {
   mat:   { label: 'Матеріали', icon: '🧱', cls: 'mat'  },
@@ -780,6 +836,15 @@ const CAT_MAP = {
   other: { label: 'Інше',      icon: '📦', cls: 'other'},
 };
 
+function getTodayDate() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
 let expenses = [];
 let currentFilter = 'all';
 let currentSort = 'date-desc';
@@ -787,11 +852,13 @@ let recentlyAddedId = null;
 let recentlyAddedDraft = null;
 let isListLoading = false;
 let isSavingExpense = false;
+let currentSession = null;
 const animatedTotals = { uah: 0, eur: 0 };
 const totalAnimationFrames = { uah: null, eur: null };
 
 document.getElementById('inp-date').value = TODAY_DATE;
 document.getElementById('inp-rate').value = TODAY_RATE;
+document.getElementById('today-info').textContent = `Курс євро сьогодні: 1 € = ${TODAY_RATE} ₴ · ${TODAY_DATE}`;
 
 /* ── AUTH ── */
 let authMode = 'login';
@@ -849,6 +916,7 @@ function translateError(msg) {
 
 async function logout() {
   await sb.auth.signOut();
+  currentSession = null;
   expenses = [];
   render();
 }
@@ -857,6 +925,8 @@ async function logout() {
 async function init() {
   try {
     const { data: { session } } = await sb.auth.getSession();
+    currentSession = session;
+
     if (session) {
       showApp();
       await loadExpenses();
@@ -871,6 +941,7 @@ async function init() {
 
   sb.auth.onAuthStateChange(async (event, session) => {
     if (event === 'INITIAL_SESSION') return;
+    currentSession = session;
 
     if (session) {
       showApp();
@@ -889,6 +960,20 @@ function showApp() {
 function showAuth() {
   document.getElementById('auth-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
+}
+
+async function refreshData() {
+  const btn = document.getElementById('btn-refresh');
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  try {
+    await loadExpenses();
+    toast('Оновлено');
+  } finally {
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
 }
 
 /* ── DATA ── */
@@ -937,12 +1022,16 @@ async function addExpense() {
   btn.textContent = 'Зберігаю…';
 
   try {
-    const { data: { session } } = await sb.auth.getSession();
+    const session = await getActiveSession();
     if (!session?.user) { toast('Сесія закінчилась, увійди знову'); showAuth(); return; }
 
     const tempId = 'temp-' + Date.now();
     const newExpense = { user_id: session.user.id, name, uah, date, cat, rate };
-    const { error } = await sb.from('expenses').insert([newExpense]);
+    const { error } = await withTimeout(
+      sb.from('expenses').insert([newExpense]),
+      10000,
+      'Запит збереження не відповів'
+    );
 
     if (error) {
       toast('Помилка: ' + error.message);
@@ -970,7 +1059,7 @@ async function addExpense() {
       document.querySelectorAll('.expense-new').forEach(el => el.classList.remove('expense-new'));
     }, 1000);
   } catch (e) {
-    toast('Помилка збереження 😕');
+    toast(e?.message || 'Помилка збереження 😕');
     console.error(e);
   } finally {
     isSavingExpense = false;
@@ -980,15 +1069,63 @@ async function addExpense() {
 }
 
 async function deleteExpense(id) {
-  const { error } = await sb.from('expenses').delete().eq('id', id);
-  if (error) { toast('Помилка видалення 😕'); return; }
-  toast('Видалено');
-  await loadExpenses();
+  if (!confirm('Видалити цю витрату?')) return;
+
+  const previousExpenses = expenses.slice();
+  expenses = expenses.filter(expense => Number(expense.id) !== Number(id));
+  render();
+
+  try {
+    const { error } = await withTimeout(
+      sb.from('expenses').delete().eq('id', id),
+      10000,
+      'Запит видалення не відповів'
+    );
+
+    if (error) {
+      expenses = previousExpenses;
+      render();
+      toast('Помилка видалення 😕');
+      console.error(error);
+      return;
+    }
+
+    toast('Видалено');
+    loadExpenses().catch(e => {
+      toast('Видалено, але список не оновився');
+      console.error(e);
+    });
+  } catch (e) {
+    expenses = previousExpenses;
+    render();
+    toast(e?.message || 'Помилка видалення 😕');
+    console.error(e);
+  }
 }
 
 /* ── UI HELPERS ── */
 function normalizeNumber(value) {
   return parseFloat(String(value).replace(',', '.'));
+}
+
+function withTimeout(promise, ms, message) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms))
+  ]);
+}
+
+async function getActiveSession() {
+  if (currentSession?.user) return currentSession;
+
+  const { data: { session } } = await withTimeout(
+    sb.auth.getSession(),
+    5000,
+    'Не вдалося перевірити сесію'
+  );
+
+  currentSession = session;
+  return session;
 }
 
 function shake(id, message) {
@@ -1001,6 +1138,15 @@ function shake(id, message) {
 
 function setTodayRate() {
   document.getElementById('inp-rate').value = TODAY_RATE;
+}
+
+function toggleExpenseForm() {
+  const form = document.getElementById('expense-form');
+  const btn = document.getElementById('btn-form-toggle');
+  const isCollapsed = form.classList.toggle('collapsed');
+
+  btn.setAttribute('aria-expanded', String(!isCollapsed));
+  btn.setAttribute('aria-label', isCollapsed ? 'Розгорнути форму' : 'Згорнути форму');
 }
 
 function setFilter(cat) {
@@ -1240,50 +1386,6 @@ function render() {
       </div>`;
     ml.appendChild(div);
   });
-  attachSwipeActions();
-}
-
-function attachSwipeActions() {
-  document.querySelectorAll('.expense-card').forEach(card => {
-    let startX = 0;
-    let startY = 0;
-    let dx = 0;
-    let isSwiping = false;
-
-    card.addEventListener('touchstart', e => {
-      const touch = e.touches[0];
-      startX = touch.clientX;
-      startY = touch.clientY;
-      dx = 0;
-      isSwiping = false;
-    }, { passive: true });
-
-    card.addEventListener('touchmove', e => {
-      const touch = e.touches[0];
-      dx = touch.clientX - startX;
-      const dy = Math.abs(touch.clientY - startY);
-
-      if (Math.abs(dx) > 24 && Math.abs(dx) > dy && dx < 0) {
-        isSwiping = true;
-        card.classList.add('swiping');
-      }
-
-      if (dx > -20) card.classList.remove('swiping');
-    }, { passive: true });
-
-    card.addEventListener('touchend', () => {
-      if (isSwiping && dx < -92 && card.dataset.id) {
-        if (card.dataset.id.startsWith('temp-')) {
-          card.classList.remove('swiping');
-          return;
-        }
-        deleteExpense(Number(card.dataset.id));
-        return;
-      }
-
-      setTimeout(() => card.classList.remove('swiping'), 120);
-    });
-  });
 }
 
 // ── Wire up all event listeners ──
@@ -1291,7 +1393,9 @@ document.getElementById('auth-switch-link').addEventListener('click', switchTab)
 document.getElementById('auth-btn').addEventListener('click', authSubmit);
 document.getElementById('auth-email').addEventListener('keydown', e => { if (e.key === 'Enter') authSubmit(); });
 document.getElementById('auth-password').addEventListener('keydown', e => { if (e.key === 'Enter') authSubmit(); });
+document.getElementById('btn-refresh').addEventListener('click', refreshData);
 document.getElementById('btn-logout').addEventListener('click', logout);
+document.querySelector('#expense-form .form-header').addEventListener('click', toggleExpenseForm);
 document.getElementById('btn-today-rate').addEventListener('click', setTodayRate);
 document.getElementById('sort-select').addEventListener('change', e => setSort(e.target.value));
 document.getElementById('filters').addEventListener('click', e => {
