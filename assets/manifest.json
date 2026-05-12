@@ -2,20 +2,20 @@
   "name": "Ремонт — трекер витрат",
   "short_name": "Ремонт",
   "description": "Трекер витрат на ремонт",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#111706",
   "theme_color": "#111706",
   "icons": [
     {
-      "src": "/assets/images/android-icon-144x144.png",
+      "src": "images/android-icon-144x144.png",
       "sizes": "144x144",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/assets/images/android-icon-144x144.png",
+      "src": "images/android-icon-144x144.png",
       "sizes": "144x144",
       "type": "image/png",
       "purpose": "maskable"
