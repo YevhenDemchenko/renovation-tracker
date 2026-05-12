@@ -116,6 +116,22 @@
     transition: border-color .15s, box-shadow .15s, background .15s;
   }
   .auth-group input:focus { border-color: rgba(165,238,48,.7); box-shadow: 0 0 0 4px var(--accent-light); }
+  .auth-remember {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--muted);
+    font-size: 13px;
+    margin: -4px 0 16px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .auth-remember input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
   .btn-auth {
     width: 100%;
     padding: 12px;
@@ -703,6 +719,10 @@
       <label>Пароль</label>
       <input type="password" id="auth-password" placeholder="••••••••">
     </div>
+    <label class="auth-remember">
+      <input type="checkbox" id="auth-remember" checked>
+      <span>Запамʼятати мене</span>
+    </label>
     <button class="btn-auth" id="auth-btn">Увійти</button>
     <div class="auth-error" id="auth-error"></div>
     <div class="auth-switch">
@@ -816,12 +836,34 @@
 <script>
 const SUPABASE_URL = 'https://ipczlgqegunlhoalllxc.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_iR6694VCan06DUIN_xorvw_xFzwKnhE';
+const AUTH_STORAGE_KEY = 'renovation-tracker-auth';
+const REMEMBER_AUTH_KEY = 'renovation-tracker-remember-auth';
+function shouldRememberAuth() {
+  return localStorage.getItem(REMEMBER_AUTH_KEY) !== 'false';
+}
+function getAuthStorage() {
+  return shouldRememberAuth() ? localStorage : sessionStorage;
+}
+const authStorage = {
+  getItem: key => getAuthStorage().getItem(key),
+  setItem: (key, value) => {
+    const target = getAuthStorage();
+    const stale = target === localStorage ? sessionStorage : localStorage;
+    stale.removeItem(key);
+    target.setItem(key, value);
+  },
+  removeItem: key => {
+    localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
+  }
+};
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    storageKey: 'renovation-tracker-auth'
+    storageKey: AUTH_STORAGE_KEY,
+    storage: authStorage
   }
 });
 
@@ -859,9 +901,14 @@ const totalAnimationFrames = { uah: null, eur: null };
 document.getElementById('inp-date').value = TODAY_DATE;
 document.getElementById('inp-rate').value = TODAY_RATE;
 document.getElementById('today-info').textContent = `Курс євро сьогодні: 1 € = ${TODAY_RATE} ₴ · ${TODAY_DATE}`;
+syncRememberControl();
 
 /* ── AUTH ── */
 let authMode = 'login';
+
+function syncRememberControl() {
+  document.getElementById('auth-remember').checked = shouldRememberAuth();
+}
 
 function switchTab() {
   authMode = authMode === 'login' ? 'register' : 'login';
@@ -876,11 +923,13 @@ function switchTab() {
 async function authSubmit() {
   const email = document.getElementById('auth-email').value.trim();
   const password = document.getElementById('auth-password').value;
+  const remember = document.getElementById('auth-remember').checked;
   const btn = document.getElementById('auth-btn');
   const errEl = document.getElementById('auth-error');
 
   if (!email || !password) return;
 
+  localStorage.setItem(REMEMBER_AUTH_KEY, String(remember));
   btn.disabled = true;
   btn.textContent = '…';
   errEl.classList.remove('show');
@@ -962,18 +1011,8 @@ function showAuth() {
   document.getElementById('app').style.display = 'none';
 }
 
-async function refreshData() {
-  const btn = document.getElementById('btn-refresh');
-  btn.classList.add('loading');
-  btn.disabled = true;
-
-  try {
-    await loadExpenses();
-    toast('Оновлено');
-  } finally {
-    btn.classList.remove('loading');
-    btn.disabled = false;
-  }
+function refreshData() {
+  window.location.reload();
 }
 
 /* ── DATA ── */
