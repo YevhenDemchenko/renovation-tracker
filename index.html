@@ -983,6 +983,7 @@ function translateError(msg) {
 }
 
 async function logout() {
+  await disableNotifications({ silent: true });
   unsubscribeFromExpensesRealtime();
   await sb.auth.signOut();
   currentSession = null;
@@ -1270,6 +1271,14 @@ async function enableNotifications() {
     return;
   }
 
+  const registration = await registerServiceWorker();
+  const existingSubscription = await registration.pushManager.getSubscription();
+
+  if (Notification.permission === 'granted' && existingSubscription) {
+    await disableNotifications();
+    return;
+  }
+
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') {
     toast('Сповіщення не дозволені');
@@ -1277,8 +1286,7 @@ async function enableNotifications() {
     return;
   }
 
-  const registration = await registerServiceWorker();
-  let subscription = await registration.pushManager.getSubscription();
+  let subscription = existingSubscription;
 
   if (!subscription) {
     subscription = await registration.pushManager.subscribe({
@@ -1305,6 +1313,33 @@ async function enableNotifications() {
 
   toast('Сповіщення увімкнені');
   syncNotificationsButton();
+}
+
+async function disableNotifications(options = {}) {
+  if (!isPushSupported()) return;
+
+  try {
+    const registration = await registerServiceWorker();
+    const subscription = await registration.pushManager.getSubscription();
+
+    if (!subscription) {
+      syncNotificationsButton();
+      return;
+    }
+
+    await sb
+      .from('push_subscriptions')
+      .delete()
+      .eq('endpoint', subscription.endpoint);
+
+    await subscription.unsubscribe();
+
+    if (!options.silent) toast('Сповіщення вимкнені');
+    syncNotificationsButton();
+  } catch (e) {
+    console.error(e);
+    if (!options.silent) toast('Не вдалося вимкнути сповіщення');
+  }
 }
 
 async function notifyExpenseCreated(expense) {
