@@ -1056,6 +1056,11 @@ function subscribeToExpensesRealtime() {
       },
       payload => {
         if (isSavingExpense) return;
+        if (payload.eventType === 'INSERT' && payload.new?.name) {
+          const cat = CAT_MAP[payload.new.cat] || CAT_MAP.other;
+          toast(`Нова витрата: ${payload.new.name}`);
+          showLocalNotification('Нова витрата', `${payload.new.name}: ₴ ${fmt(payload.new.uah)} · ${cat.label}`);
+        }
         loadExpenses().catch(console.error);
       }
     )
@@ -1164,8 +1169,9 @@ async function addExpense() {
 async function deleteExpense(id) {
   if (!confirm('Видалити цю витрату?')) return;
 
+  const normalizedId = String(id);
   const previousExpenses = expenses.slice();
-  expenses = expenses.filter(expense => Number(expense.id) !== Number(id));
+  expenses = expenses.filter(expense => String(expense.id) !== normalizedId);
   render();
 
   try {
@@ -1277,21 +1283,16 @@ async function enableNotifications() {
 
   const registration = await registerServiceWorker();
   const existingSubscription = await registration.pushManager.getSubscription();
-
-  if (Notification.permission === 'granted' && existingSubscription) {
-    toast('Сповіщення вже увімкнені');
-    syncNotificationsButton();
-    return;
-  }
-
-  const permission = await Notification.requestPermission();
-  if (permission !== 'granted') {
-    toast('Сповіщення не дозволені');
-    syncNotificationsButton();
-    return;
-  }
-
   let subscription = existingSubscription;
+
+  if (Notification.permission !== 'granted') {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      toast('Сповіщення не дозволені');
+      syncNotificationsButton();
+      return;
+    }
+  }
 
   if (!subscription) {
     subscription = await registration.pushManager.subscribe({
@@ -1300,10 +1301,16 @@ async function enableNotifications() {
     });
   }
 
+  await savePushSubscription(session.user.id, subscription);
+  toast(existingSubscription ? 'Сповіщення вже увімкнені' : 'Сповіщення увімкнені');
+  syncNotificationsButton();
+}
+
+async function savePushSubscription(userId, subscription) {
   const { error } = await sb
     .from('push_subscriptions')
     .upsert({
-      user_id: session.user.id,
+      user_id: userId,
       endpoint: subscription.endpoint,
       subscription: subscription.toJSON(),
       user_agent: navigator.userAgent,
@@ -1313,11 +1320,8 @@ async function enableNotifications() {
   if (error) {
     console.error(error);
     toast('Не вдалося зберегти підписку');
-    return;
+    throw error;
   }
-
-  toast('Сповіщення увімкнені');
-  syncNotificationsButton();
 }
 
 async function disableNotifications(options = {}) {
@@ -1349,11 +1353,6 @@ async function disableNotifications(options = {}) {
 
 async function notifyExpenseCreated(expense) {
   try {
-    const registration = isPushSupported() ? await registerServiceWorker() : null;
-    const subscription = registration ? await registration.pushManager.getSubscription() : null;
-
-    if (!subscription) return;
-
     const session = await getActiveSession();
     if (!session?.user) return;
 
@@ -1372,6 +1371,23 @@ async function notifyExpenseCreated(expense) {
     }
   } catch (e) {
     console.warn('Push notification failed:', e);
+  }
+}
+
+async function showLocalNotification(title, body) {
+  if (!isPushSupported() || Notification.permission !== 'granted') return;
+
+  try {
+    const registration = await registerServiceWorker();
+    await registration.showNotification(title, {
+      body,
+      icon: './assets/images/android-icon-144x144.png',
+      badge: './assets/images/android-icon-144x144.png',
+      data: { url: './' },
+      tag: `local-${Date.now()}`
+    });
+  } catch (e) {
+    console.warn('Local notification failed:', e);
   }
 }
 
@@ -1672,7 +1688,7 @@ document.getElementById('filters').addEventListener('click', e => {
 document.querySelector('.table-wrap').addEventListener('click', e => {
   const btn = e.target.closest('.btn-del');
   if (!btn?.dataset.id || btn.dataset.id.startsWith('temp-')) return;
-  deleteExpense(Number(btn.dataset.id));
+  deleteExpense(btn.dataset.id);
 });
 
 init();
