@@ -914,6 +914,7 @@ let isSavingExpense = false;
 let currentSession = null;
 let expensesRealtimeChannel = null;
 let serviceWorkerRegistration = null;
+let lastResumeRefreshAt = 0;
 const animatedTotals = { uah: 0, eur: 0 };
 const totalAnimationFrames = { uah: null, eur: null };
 
@@ -983,12 +984,31 @@ function translateError(msg) {
 }
 
 async function logout() {
-  await disableNotifications({ silent: true });
+  const btn = document.getElementById('btn-logout');
+  btn.disabled = true;
+  btn.textContent = '...';
+
   unsubscribeFromExpensesRealtime();
-  await sb.auth.signOut();
   currentSession = null;
   expenses = [];
+  showAuth();
   render();
+
+  try {
+    await withTimeout(disableNotifications({ silent: true }), 2500, 'Push unsubscribe timeout');
+  } catch (e) {
+    console.warn(e);
+  }
+
+  try {
+    await withTimeout(sb.auth.signOut(), 5000, 'Logout timeout');
+  } catch (e) {
+    console.warn(e);
+    authStorage.removeItem(AUTH_STORAGE_KEY);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Вийти';
+  }
 }
 
 /* ── INIT ── */
@@ -1041,6 +1061,17 @@ function refreshData() {
   window.location.reload();
 }
 
+function refreshAfterResume() {
+  if (!currentSession?.user) return;
+
+  const now = Date.now();
+  if (now - lastResumeRefreshAt < 1200) return;
+  lastResumeRefreshAt = now;
+
+  restartExpensesRealtime();
+  loadExpenses().catch(console.error);
+}
+
 function subscribeToExpensesRealtime() {
   if (!currentSession?.user || expensesRealtimeChannel) return;
 
@@ -1071,6 +1102,11 @@ function unsubscribeFromExpensesRealtime() {
   if (!expensesRealtimeChannel) return;
   sb.removeChannel(expensesRealtimeChannel);
   expensesRealtimeChannel = null;
+}
+
+function restartExpensesRealtime() {
+  unsubscribeFromExpensesRealtime();
+  subscribeToExpensesRealtime();
 }
 
 /* ── DATA ── */
@@ -1328,20 +1364,25 @@ async function disableNotifications(options = {}) {
   if (!isPushSupported()) return;
 
   try {
-    const registration = await registerServiceWorker();
-    const subscription = await registration.pushManager.getSubscription();
+    const registration = await withTimeout(registerServiceWorker(), 2000, 'Service worker timeout');
+    const subscription = await withTimeout(
+      registration.pushManager.getSubscription(),
+      2000,
+      'Push subscription timeout'
+    );
 
     if (!subscription) {
       syncNotificationsButton();
       return;
     }
 
-    await sb
-      .from('push_subscriptions')
-      .delete()
-      .eq('endpoint', subscription.endpoint);
+    await withTimeout(
+      sb.from('push_subscriptions').delete().eq('endpoint', subscription.endpoint),
+      3000,
+      'Subscription delete timeout'
+    );
 
-    await subscription.unsubscribe();
+    await withTimeout(subscription.unsubscribe(), 2000, 'Browser unsubscribe timeout');
 
     if (!options.silent) toast('Сповіщення вимкнені');
     syncNotificationsButton();
@@ -1690,6 +1731,16 @@ document.querySelector('.table-wrap').addEventListener('click', e => {
   if (!btn?.dataset.id || btn.dataset.id.startsWith('temp-')) return;
   deleteExpense(btn.dataset.id);
 });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') refreshAfterResume();
+});
+window.addEventListener('focus', refreshAfterResume);
+window.addEventListener('pageshow', refreshAfterResume);
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data?.type === 'refresh-expenses') refreshAfterResume();
+  });
+}
 
 init();
 </script>
