@@ -188,6 +188,7 @@
   .header h1 { font-size: 24px; font-weight: 800; letter-spacing: 0; }
   .header p { font-size: 13px; color: var(--muted); margin-top: 2px; }
   .btn-refresh,
+  .btn-notifications,
   .btn-logout {
     margin-left: auto;
     padding: 7px 14px;
@@ -212,11 +213,23 @@
     place-items: center;
     font-size: 16px;
   }
+  .btn-notifications {
+    display: none;
+    margin-left: 0;
+    gap: 6px;
+    align-items: center;
+  }
   .btn-logout {
     margin-left: auto;
   }
   .btn-refresh:hover,
+  .btn-notifications:hover,
   .btn-logout:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-notifications.enabled {
+    border-color: rgba(165,238,48,.55);
+    color: var(--accent);
+  }
+  .btn-notifications[hidden] { display: none !important; }
   .btn-refresh.loading {
     color: var(--accent);
     animation: refreshSpin .7s linear infinite;
@@ -691,6 +704,7 @@
     .desktop-table { display: none; }
     .mobile-list { display: block; }
     .btn-refresh { display: grid; }
+    .btn-notifications { display: inline-flex; }
     .btn-logout { margin-left: 0; }
     .header h1 { font-size: 18px; }
     .loading-state { min-height: max(620px, calc(100vh - 180px)); }
@@ -741,6 +755,7 @@
       <p id="today-info">Курс євро сьогодні: 1 € = 51.62 ₴ · 2026-05-07</p>
     </div>
     <button type="button" class="btn-refresh" id="btn-refresh" title="Оновити дані" aria-label="Оновити дані">↻</button>
+    <button type="button" class="btn-notifications" id="btn-notifications" title="Увімкнути сповіщення" aria-label="Увімкнути сповіщення">🔔</button>
     <button class="btn-logout" id="btn-logout">Вийти</button>
   </div>
 
@@ -838,6 +853,8 @@ const SUPABASE_URL = 'https://ipczlgqegunlhoalllxc.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_iR6694VCan06DUIN_xorvw_xFzwKnhE';
 const AUTH_STORAGE_KEY = 'renovation-tracker-auth';
 const REMEMBER_AUTH_KEY = 'renovation-tracker-remember-auth';
+const PUSH_PUBLIC_KEY = 'BLTmlEix2C81kDapHPaVR2vR3cDp97yttHg2pXaaBvwefYxH38NHXvrLCbfK6y7jFXx_AqtHxiexgfjuc4';
+const PUSH_FUNCTION_NAME = 'send-expense-push';
 function shouldRememberAuth() {
   return localStorage.getItem(REMEMBER_AUTH_KEY) !== 'false';
 }
@@ -895,6 +912,8 @@ let recentlyAddedDraft = null;
 let isListLoading = false;
 let isSavingExpense = false;
 let currentSession = null;
+let expensesRealtimeChannel = null;
+let serviceWorkerRegistration = null;
 const animatedTotals = { uah: 0, eur: 0 };
 const totalAnimationFrames = { uah: null, eur: null };
 
@@ -964,6 +983,7 @@ function translateError(msg) {
 }
 
 async function logout() {
+  unsubscribeFromExpensesRealtime();
   await sb.auth.signOut();
   currentSession = null;
   expenses = [];
@@ -978,6 +998,8 @@ async function init() {
 
     if (session) {
       showApp();
+      subscribeToExpensesRealtime();
+      syncNotificationsButton();
       await loadExpenses();
     } else {
       showAuth();
@@ -994,8 +1016,11 @@ async function init() {
 
     if (session) {
       showApp();
+      subscribeToExpensesRealtime();
+      syncNotificationsButton();
       await loadExpenses();
     } else {
+      unsubscribeFromExpensesRealtime();
       showAuth();
     }
   });
@@ -1013,6 +1038,33 @@ function showAuth() {
 
 function refreshData() {
   window.location.reload();
+}
+
+function subscribeToExpensesRealtime() {
+  if (!currentSession?.user || expensesRealtimeChannel) return;
+
+  expensesRealtimeChannel = sb
+    .channel('expenses-changes')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'expenses',
+        filter: `user_id=eq.${currentSession.user.id}`
+      },
+      payload => {
+        if (isSavingExpense) return;
+        loadExpenses().catch(console.error);
+      }
+    )
+    .subscribe();
+}
+
+function unsubscribeFromExpensesRealtime() {
+  if (!expensesRealtimeChannel) return;
+  sb.removeChannel(expensesRealtimeChannel);
+  expensesRealtimeChannel = null;
 }
 
 /* ── DATA ── */
@@ -1085,6 +1137,7 @@ async function addExpense() {
     document.getElementById('inp-uah').value  = '';
     toast('✓ Витрату додано');
     celebrateMoney();
+    notifyExpenseCreated(newExpense).catch(console.error);
     render();
     btn.disabled = false;
     btn.textContent = 'Додати витрату';
@@ -1152,6 +1205,121 @@ function withTimeout(promise, ms, message) {
     promise,
     new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms))
   ]);
+}
+
+function isPushSupported() {
+  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+}
+
+async function registerServiceWorker() {
+  if (!isPushSupported()) return null;
+  if (serviceWorkerRegistration) return serviceWorkerRegistration;
+
+  serviceWorkerRegistration = await navigator.serviceWorker.register('./service-worker.js');
+  await navigator.serviceWorker.ready;
+  return serviceWorkerRegistration;
+}
+
+function urlBase64ToUint8Array(value) {
+  const padding = '='.repeat((4 - value.length % 4) % 4);
+  const base64 = (value + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const output = new Uint8Array(raw.length);
+
+  for (let i = 0; i < raw.length; i++) {
+    output[i] = raw.charCodeAt(i);
+  }
+
+  return output;
+}
+
+async function syncNotificationsButton() {
+  const btn = document.getElementById('btn-notifications');
+  if (!btn) return;
+
+  if (!isPushSupported()) {
+    btn.hidden = true;
+    return;
+  }
+
+  btn.hidden = false;
+
+  try {
+    const registration = await registerServiceWorker();
+    const subscription = await registration.pushManager.getSubscription();
+    const enabled = Notification.permission === 'granted' && !!subscription;
+
+    btn.classList.toggle('enabled', enabled);
+    btn.textContent = enabled ? '🔔' : '🔕';
+    btn.title = enabled ? 'Сповіщення увімкнені' : 'Увімкнути сповіщення';
+    btn.setAttribute('aria-label', btn.title);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function enableNotifications() {
+  if (!isPushSupported()) {
+    toast('Цей браузер не підтримує push 😕');
+    return;
+  }
+
+  const session = await getActiveSession();
+  if (!session?.user) {
+    toast('Спочатку увійди в акаунт');
+    return;
+  }
+
+  const permission = await Notification.requestPermission();
+  if (permission !== 'granted') {
+    toast('Сповіщення не дозволені');
+    syncNotificationsButton();
+    return;
+  }
+
+  const registration = await registerServiceWorker();
+  let subscription = await registration.pushManager.getSubscription();
+
+  if (!subscription) {
+    subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(PUSH_PUBLIC_KEY)
+    });
+  }
+
+  const { error } = await sb
+    .from('push_subscriptions')
+    .upsert({
+      user_id: session.user.id,
+      endpoint: subscription.endpoint,
+      subscription: subscription.toJSON(),
+      user_agent: navigator.userAgent,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'endpoint' });
+
+  if (error) {
+    console.error(error);
+    toast('Не вдалося зберегти підписку');
+    return;
+  }
+
+  toast('Сповіщення увімкнені');
+  syncNotificationsButton();
+}
+
+async function notifyExpenseCreated(expense) {
+  const session = await getActiveSession();
+  if (!session?.user) return;
+
+  const cat = CAT_MAP[expense.cat] || CAT_MAP.other;
+  await sb.functions.invoke(PUSH_FUNCTION_NAME, {
+    body: {
+      title: 'Нова витрата',
+      body: `${expense.name}: ₴ ${fmt(expense.uah)} · ${cat.label}`,
+      tag: `expense-${Date.now()}`,
+      url: './'
+    }
+  });
 }
 
 async function getActiveSession() {
@@ -1433,6 +1601,7 @@ document.getElementById('auth-btn').addEventListener('click', authSubmit);
 document.getElementById('auth-email').addEventListener('keydown', e => { if (e.key === 'Enter') authSubmit(); });
 document.getElementById('auth-password').addEventListener('keydown', e => { if (e.key === 'Enter') authSubmit(); });
 document.getElementById('btn-refresh').addEventListener('click', refreshData);
+document.getElementById('btn-notifications').addEventListener('click', enableNotifications);
 document.getElementById('btn-logout').addEventListener('click', logout);
 document.querySelector('#expense-form .form-header').addEventListener('click', toggleExpenseForm);
 document.getElementById('btn-today-rate').addEventListener('click', setTodayRate);
