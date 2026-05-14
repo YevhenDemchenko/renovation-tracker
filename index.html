@@ -1138,7 +1138,7 @@ async function addExpense() {
     document.getElementById('inp-uah').value  = '';
     toast('✓ Витрату додано');
     celebrateMoney();
-    notifyExpenseCreated(newExpense).catch(console.error);
+    notifyExpenseCreated(newExpense);
     render();
     btn.disabled = false;
     btn.textContent = 'Додати витрату';
@@ -1256,6 +1256,10 @@ async function syncNotificationsButton() {
     btn.setAttribute('aria-label', btn.title);
   } catch (e) {
     console.error(e);
+    btn.classList.remove('enabled');
+    btn.textContent = '🔕';
+    btn.title = 'Сповіщення недоступні';
+    btn.setAttribute('aria-label', btn.title);
   }
 }
 
@@ -1275,7 +1279,8 @@ async function enableNotifications() {
   const existingSubscription = await registration.pushManager.getSubscription();
 
   if (Notification.permission === 'granted' && existingSubscription) {
-    await disableNotifications();
+    toast('Сповіщення вже увімкнені');
+    syncNotificationsButton();
     return;
   }
 
@@ -1343,18 +1348,31 @@ async function disableNotifications(options = {}) {
 }
 
 async function notifyExpenseCreated(expense) {
-  const session = await getActiveSession();
-  if (!session?.user) return;
+  try {
+    const registration = isPushSupported() ? await registerServiceWorker() : null;
+    const subscription = registration ? await registration.pushManager.getSubscription() : null;
 
-  const cat = CAT_MAP[expense.cat] || CAT_MAP.other;
-  await sb.functions.invoke(PUSH_FUNCTION_NAME, {
-    body: {
-      title: 'Нова витрата',
-      body: `${expense.name}: ₴ ${fmt(expense.uah)} · ${cat.label}`,
-      tag: `expense-${Date.now()}`,
-      url: './'
+    if (!subscription) return;
+
+    const session = await getActiveSession();
+    if (!session?.user) return;
+
+    const cat = CAT_MAP[expense.cat] || CAT_MAP.other;
+    const { error } = await sb.functions.invoke(PUSH_FUNCTION_NAME, {
+      body: {
+        title: 'Нова витрата',
+        body: `${expense.name}: ₴ ${fmt(expense.uah)} · ${cat.label}`,
+        tag: `expense-${Date.now()}`,
+        url: './'
+      }
+    });
+
+    if (error) {
+      console.warn('Push notification failed:', error);
     }
-  });
+  } catch (e) {
+    console.warn('Push notification failed:', e);
+  }
 }
 
 async function getActiveSession() {
