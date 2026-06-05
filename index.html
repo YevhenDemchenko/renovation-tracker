@@ -190,7 +190,7 @@
   .btn-refresh,
   .btn-notifications,
   .btn-logout {
-    margin-left: auto;
+    margin-left: 0;
     padding: 7px 14px;
     border-radius: 20px;
     border: 1px solid var(--border);
@@ -205,7 +205,7 @@
     flex-shrink: 0;
   }
   .btn-refresh {
-    margin-left: auto;
+    margin-left: 0;
     width: 34px;
     height: 34px;
     padding: 0;
@@ -220,11 +220,28 @@
     align-items: center;
   }
   .btn-logout {
+    margin-left: 0;
+  }
+  .btn-theme {
     margin-left: auto;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: #0d1205;
+    cursor: pointer;
+    color: var(--text);
+    font-family: inherit;
+    flex-shrink: 0;
+    transition: all .15s;
   }
   .btn-refresh:hover,
   .btn-notifications:hover,
-  .btn-logout:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-logout:hover,
+  .btn-theme:hover { border-color: var(--accent); color: var(--accent); }
   .btn-notifications.enabled {
     border-color: rgba(165,238,48,.55);
     color: var(--accent);
@@ -619,6 +636,46 @@
   .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
   .empty-state p { font-size: 14px; }
 
+  /* ── CONNECTION BANNER ── */
+  #connection-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: rgba(50, 18, 12, .97);
+    border-bottom: 1px solid rgba(255, 100, 80, .28);
+    color: var(--accent2);
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transform: translateY(-100%);
+    transition: transform .3s ease;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  #connection-banner.show {
+    transform: translateY(0);
+  }
+  .banner-btn {
+    background: none;
+    border: 1px solid rgba(255,154,140,.4);
+    color: var(--accent2);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all .15s;
+    flex-shrink: 0;
+  }
+  .banner-btn:hover { background: var(--accent2-light); }
+  .banner-btn:disabled { opacity: .5; cursor: not-allowed; }
+
   /* ── TOAST ── */
   .toast {
     position: fixed;
@@ -704,16 +761,175 @@
     .desktop-table { display: none; }
     .mobile-list { display: block; }
     .btn-refresh { display: grid; }
-    .btn-notifications { display: inline-flex; }
+    .btn-refresh, .btn-notifications, .btn-theme {
+      width: 28px;
+      height: 28px;
+      font-size: 14px;
+      padding: 0;
+      display: grid;
+
+      svg {
+        width: 14px;
+        height: 14px;
+      }
+    }
     .btn-logout { margin-left: 0; }
-    .header h1 { font-size: 18px; }
+    .header h1 { font-size: 13px; }
+    .header p { font-size: 10px; }
     .loading-state { min-height: max(620px, calc(100vh - 180px)); }
+    .header-icon {
+      width: 28px;
+      height: 28px;
+      font-size: 12px;
+    }
+    .header { gap: 9px; }
   }
   @media (max-width: 480px) {
     .stats { grid-template-columns: 1fr 1fr; }
     .stat-value { font-size: 16px; }
     .form-grid { grid-template-columns: 1fr; }
     .form-grid .form-group { grid-column: span 1 / span 1 !important; }
+  }
+
+  /* ── THEME PANEL ── */
+  .theme-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(0,0,0,.42);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  }
+  .theme-panel {
+    position: fixed;
+    bottom: 24px;
+    right: 16px;
+    z-index: 201;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    width: 288px;
+    overflow: hidden;
+    animation: tpSlideUp .2s ease;
+  }
+  @keyframes tpSlideUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .theme-panel-header {
+    display: flex;
+    align-items: center;
+    padding: 16px 18px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .theme-panel-title { font-weight: 800; font-size: 15px; flex: 1; }
+  .theme-close-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 0;
+    line-height: 1;
+    transition: color .15s;
+  }
+  .theme-close-btn:hover { color: var(--text); }
+  .theme-panel-body { padding: 16px 18px 20px; }
+  .theme-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .theme-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .theme-label small { display: block; color: var(--muted); font-size: 11px; font-weight: 400; margin-top: 2px; }
+  .theme-color-wrap { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .theme-color-input {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    cursor: pointer;
+    padding: 3px;
+    background: #151812;
+    border: 1px solid var(--border);
+  }
+  .theme-hex {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'Courier New', monospace;
+    min-width: 54px;
+  }
+  .theme-divider { height: 1px; background: var(--border); margin: 14px 0; }
+  .theme-presets-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .theme-presets { display: flex; gap: 8px; flex-wrap: wrap; }
+  .theme-preset {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform .15s, border-color .15s, box-shadow .15s;
+    outline: none;
+  }
+  .theme-preset:hover { transform: scale(1.18); }
+  .theme-preset.active { border-color: var(--text); box-shadow: 0 0 0 3px rgba(245,245,238,.15); }
+  .theme-actions { display: flex; gap: 8px; margin-top: 18px; }
+  .btn-theme-reset {
+    flex: 1;
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all .15s;
+  }
+  .btn-theme-reset:hover { border-color: var(--text); color: var(--text); }
+  .btn-theme-save {
+    flex: 2;
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: var(--accent);
+    color: #101507;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: inherit;
+    transition: opacity .15s;
+  }
+  .btn-theme-save:hover { opacity: .88; }
+  .btn-theme-save:disabled { opacity: .5; cursor: not-allowed; }
+  @media (max-width: 680px) {
+    .theme-panel {
+      bottom: 0;
+      right: 0;
+      left: 0;
+      width: auto;
+      border-radius: var(--radius) var(--radius) 0 0;
+      animation: tpSlideUpMobile .22s ease;
+    }
+  }
+  @keyframes tpSlideUpMobile {
+    from { opacity: 0; transform: translateY(100%); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 </style>
 </head>
@@ -752,8 +968,9 @@
     <div class="header-icon">🏗️</div>
     <div>
       <h1>Трекер витрат на ремонт</h1>
-      <p id="today-info">Курс євро сьогодні: 1 € = 51.62 ₴ · 2026-05-07</p>
+      <p id="today-info">1 € = 51.62 ₴</p>
     </div>
+    <button type="button" class="btn-theme" id="btn-theme" onclick="openThemePanel()" title="Змінити тему" aria-label="Змінити тему"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.1 0 2-.9 2-2 0-.52-.2-1-.51-1.34-.14-.17-.25-.32-.25-.66 0-.55.45-1 1-1H17c2.76 0 5-2.24 5-5 0-4.42-4.48-8-10-8z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><circle cx="6.5" cy="11.5" r="1.5" fill="currentColor"/><circle cx="9.5" cy="7.5" r="1.5" fill="currentColor"/><circle cx="14.5" cy="7.5" r="1.5" fill="currentColor"/><circle cx="17.5" cy="11.5" r="1.5" fill="currentColor"/></svg></button>
     <button type="button" class="btn-refresh" id="btn-refresh" title="Оновити дані" aria-label="Оновити дані">↻</button>
     <button type="button" class="btn-notifications" id="btn-notifications" title="Увімкнути сповіщення" aria-label="Увімкнути сповіщення">🔔</button>
     <button class="btn-logout" id="btn-logout">Вийти</button>
@@ -845,6 +1062,42 @@
   </div>
 </div>
 
+<div id="theme-overlay" class="theme-overlay" hidden onclick="closeThemePanel()"></div>
+<div id="theme-panel" class="theme-panel" hidden>
+  <div class="theme-panel-header">
+    <span class="theme-panel-title">🎨 Тема оформлення</span>
+    <button class="theme-close-btn" onclick="closeThemePanel()" aria-label="Закрити">✕</button>
+  </div>
+  <div class="theme-panel-body">
+    <div class="theme-row">
+      <div class="theme-label">Колір акценту<small>кнопки, підсвічення, суми</small></div>
+      <div class="theme-color-wrap">
+        <input type="color" class="theme-color-input" id="theme-accent-input" value="#a5ee30" oninput="onThemeColorInput('accent',this.value)">
+        <span class="theme-hex" id="theme-accent-hex">#a5ee30</span>
+      </div>
+    </div>
+    <div class="theme-row" style="margin-bottom:0">
+      <div class="theme-label">Колір фону<small>фон, картки, поля</small></div>
+      <div class="theme-color-wrap">
+        <input type="color" class="theme-color-input" id="theme-bg-input" value="#111706" oninput="onThemeColorInput('bg',this.value)">
+        <span class="theme-hex" id="theme-bg-hex">#111706</span>
+      </div>
+    </div>
+    <div class="theme-divider"></div>
+    <div class="theme-presets-label">Готові теми</div>
+    <div class="theme-presets" id="theme-presets"></div>
+    <div class="theme-actions">
+      <button class="btn-theme-reset" onclick="resetTheme()">Скинути</button>
+      <button class="btn-theme-save" id="btn-theme-save" onclick="saveTheme()">Зберегти</button>
+    </div>
+  </div>
+</div>
+
+<div id="connection-banner">
+  <span>⚠️ Не вдається підключитись до бази даних</span>
+  <button class="banner-btn" id="banner-retry-btn" onclick="retryConnection()">Повторити</button>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -887,6 +1140,17 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 const TODAY_RATE = 51.62;
 const TODAY_DATE = getTodayDate();
 
+const DEFAULT_ACCENT = '#a5ee30';
+const DEFAULT_BG = '#111706';
+const THEME_PRESETS = [
+  { name: 'Ліс',    accent: '#a5ee30', bg: '#111706' },
+  { name: 'Океан',  accent: '#4fc3f7', bg: '#091520' },
+  { name: 'Захід',  accent: '#ff9a6c', bg: '#1a0d08' },
+  { name: 'Фіолет', accent: '#c084fc', bg: '#120d1a' },
+  { name: 'Троянда',accent: '#f472b6', bg: '#1a0a10' },
+  { name: 'Золото', accent: '#fbbf24', bg: '#14100a' },
+];
+
 const CAT_MAP = {
   mat:   { label: 'Матеріали', icon: '🧱', cls: 'mat'  },
   work:  { label: 'Роботи',    icon: '🔨', cls: 'work' },
@@ -911,17 +1175,28 @@ let recentlyAddedId = null;
 let recentlyAddedDraft = null;
 let isListLoading = false;
 let isSavingExpense = false;
+let savingExpenseSince = 0;
 let currentSession = null;
 let expensesRealtimeChannel = null;
 let serviceWorkerRegistration = null;
 let lastResumeRefreshAt = 0;
+let dbConnectionError = false;
+let currentThemeAccent = DEFAULT_ACCENT;
+let currentThemeBg = DEFAULT_BG;
 const animatedTotals = { uah: 0, eur: 0 };
 const totalAnimationFrames = { uah: null, eur: null };
 
 document.getElementById('inp-date').value = TODAY_DATE;
 document.getElementById('inp-rate').value = TODAY_RATE;
-document.getElementById('today-info').textContent = `Курс євро сьогодні: 1 € = ${TODAY_RATE} ₴ · ${TODAY_DATE}`;
+document.getElementById('today-info').textContent = `1 € = ${TODAY_RATE} ₴`;
 syncRememberControl();
+
+// Apply saved theme from localStorage immediately (before auth completes, avoids flash)
+(function() {
+  const a = localStorage.getItem('theme-accent');
+  const b = localStorage.getItem('theme-bg');
+  if (a || b) applyTheme(a || DEFAULT_ACCENT, b || DEFAULT_BG);
+})();
 
 /* ── AUTH ── */
 let authMode = 'login';
@@ -1018,6 +1293,7 @@ async function init() {
     currentSession = session;
 
     if (session) {
+      loadUserTheme(session);
       showApp();
       subscribeToExpensesRealtime();
       syncNotificationsButton();
@@ -1036,6 +1312,7 @@ async function init() {
     currentSession = session;
 
     if (session) {
+      loadUserTheme(session);
       showApp();
       subscribeToExpensesRealtime();
       syncNotificationsButton();
@@ -1057,6 +1334,22 @@ function showAuth() {
   document.getElementById('app').style.display = 'none';
 }
 
+function showConnectionBanner(show) {
+  dbConnectionError = show;
+  const banner = document.getElementById('connection-banner');
+  if (banner) banner.classList.toggle('show', show);
+}
+
+async function retryConnection() {
+  const btn = document.getElementById('banner-retry-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Перевірка…'; }
+  try {
+    await loadExpenses();
+  } finally {
+    if (btn && dbConnectionError) { btn.disabled = false; btn.textContent = 'Повторити'; }
+  }
+}
+
 function refreshData() {
   window.location.reload();
 }
@@ -1067,6 +1360,16 @@ function refreshAfterResume() {
   const now = Date.now();
   if (now - lastResumeRefreshAt < 1200) return;
   lastResumeRefreshAt = now;
+
+  // Reset stuck saving state — iOS can pause timers in background, so
+  // the 10s withTimeout may not fire while backgrounded. After 12s of
+  // real time the operation is definitely dead; reset it here.
+  if (isSavingExpense && now - savingExpenseSince > 12000) {
+    isSavingExpense = false;
+    savingExpenseSince = 0;
+    const btn = document.getElementById('btn-add');
+    if (btn) { btn.disabled = false; btn.textContent = 'Додати витрату'; }
+  }
 
   restartExpensesRealtime();
   loadExpenses().catch(console.error);
@@ -1113,21 +1416,22 @@ function restartExpensesRealtime() {
 async function loadExpenses() {
   setListLoading(true);
   try {
-    const { data, error } = await sb
-      .from('expenses')
-      .select('*')
-      .order('date', { ascending: false })
-      .order('created_at', { ascending: false });
+    const { data, error } = await withTimeout(
+      sb
+        .from('expenses')
+        .select('*')
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false }),
+      10000,
+      'Таймаут завантаження'
+    );
 
-    if (error) {
-      toast('Помилка завантаження 😕');
-      console.error(error);
-      return;
-    }
+    if (error) throw error;
 
+    showConnectionBanner(false);
     expenses = data || [];
   } catch (e) {
-    toast('Помилка завантаження 😕');
+    showConnectionBanner(true);
     console.error(e);
   } finally {
     setListLoading(false);
@@ -1151,10 +1455,16 @@ async function addExpense() {
 
   const btn = document.getElementById('btn-add');
   isSavingExpense = true;
+  savingExpenseSince = Date.now();
   btn.disabled = true;
   btn.textContent = 'Зберігаю…';
 
   try {
+    if (!navigator.onLine) {
+      toast('Немає зʼєднання з інтернетом 📵');
+      return;
+    }
+
     const session = await getActiveSession();
     if (!session?.user) { toast('Сесія закінчилась, увійди знову'); showAuth(); return; }
 
@@ -1205,6 +1515,11 @@ async function addExpense() {
 async function deleteExpense(id) {
   if (!confirm('Видалити цю витрату?')) return;
 
+  if (!navigator.onLine) {
+    toast('Немає зʼєднання з інтернетом 📵');
+    return;
+  }
+
   const normalizedId = String(id);
   const previousExpenses = expenses.slice();
   expenses = expenses.filter(expense => String(expense.id) !== normalizedId);
@@ -1248,6 +1563,265 @@ function withTimeout(promise, ms, message) {
     promise,
     new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms))
   ]);
+}
+
+/* ── THEME ENGINE ── */
+function _hexToRgb(hex) {
+  return {
+    r: parseInt(hex.slice(1,3), 16),
+    g: parseInt(hex.slice(3,5), 16),
+    b: parseInt(hex.slice(5,7), 16)
+  };
+}
+function _hexToHsl(hex) {
+  let { r, g, b } = _hexToRgb(hex);
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return { h: h * 360, s: s * 100, l: l * 100 };
+}
+function _hslToHex(h, s, l) {
+  h /= 360; s /= 100; l /= 100;
+  let r, g, b;
+  if (s === 0) { r = g = b = l; }
+  else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    const h2r = (p, q, t) => {
+      if (t < 0) t += 1; if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q-p)*6*t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q-p)*(2/3-t)*6;
+      return p;
+    };
+    r = h2r(p, q, h + 1/3);
+    g = h2r(p, q, h);
+    b = h2r(p, q, h - 1/3);
+  }
+  return '#' + [r,g,b].map(x => Math.round(x*255).toString(16).padStart(2,'0')).join('');
+}
+
+function applyTheme(accentHex, bgHex) {
+  const { r: ar, g: ag, b: ab } = _hexToRgb(accentHex);
+  const bg = _hexToHsl(bgHex);
+  const ac = _hexToHsl(accentHex);
+  const cl = (v, mn, mx) => Math.max(mn, Math.min(mx, v));
+
+  const isDark = bg.l < 42;
+
+  // Surface shades derived from bg
+  const surface  = _hslToHex(bg.h, cl(bg.s - 2, 0, 100), cl(bg.l + 6,  2, 58));
+  const surface2 = _hslToHex(bg.h, cl(bg.s - 1, 0, 100), cl(bg.l + 9,  2, 60));
+  const surface3 = _hslToHex(bg.h, cl(bg.s + 2, 0, 100), cl(bg.l - 2,  1, 52));
+  const bgDark   = _hslToHex(bg.h, bg.s,                 cl(bg.l - 5,  1, 50));
+  const acDark   = _hslToHex(ac.h, ac.s,                 cl(ac.l - 15, 5, 95));
+  const onAccent = ac.l > 55 ? '#101507' : '#f5f5ee';
+
+  // Gradient stops — much more contrast so the gradient is actually visible
+  // gradTop: noticeably lighter than bgHex (+22 lightness for dark, +14 for light)
+  const gradTop  = _hslToHex(bg.h, cl(bg.s * 0.62, 0, 70), isDark ? cl(bg.l + 22, 8, 45)  : cl(bg.l + 14, 28, 90));
+  // gradBot: significantly darker than bgHex
+  const gradBot  = _hslToHex(bg.h, cl(bg.s * 0.42, 0, 50), isDark ? cl(bg.l * 0.38, 1, 18) : cl(bg.l - 18,  5, 55));
+  // deepDark: near-black with a tint of the chosen hue
+  const deepDark = isDark
+    ? _hslToHex(bg.h, cl(bg.s * 0.18, 0, 22), cl(bg.l * 0.07, 1, 5))
+    : _hslToHex(bg.h, cl(bg.s * 0.42, 0, 44), cl(bg.l - 30,   5, 42));
+
+  // Analogous hue shift (+32°) for the second radial glow — gives colour depth
+  const sh2 = _hexToRgb(_hslToHex(
+    (bg.h + 32) % 360,
+    cl(bg.s * 0.80, 8, 88),
+    isDark ? cl(bg.l * 0.55, 2, 48) : cl(bg.l - 8, 10, 75)
+  ));
+
+  // Adaptive text — hue-tinted near-white (dark) / near-black (light)
+  const tSat      = cl(bg.s * 0.18, 0, 8);
+  const textColor = _hslToHex(bg.h, tSat,       isDark ? 96 : 9);
+  const mutedColor= _hslToHex(bg.h, tSat * 1.3, isDark ? 66 : 40);
+  const phColor   = _hslToHex(bg.h, tSat,       isDark ? 40 : 57);
+  const delColor  = _hslToHex(bg.h, tSat,       isDark ? 48 : 50);
+
+  // SVG icons for select/date — follow text color
+  const svgClr = textColor.replace('#', '%23');
+  const arrowSvg = `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m7 10 5 5 5-5' stroke='${svgClr}' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`;
+  const calSvg   = `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 2v4M16 2v4M3.5 9.5h17M5.5 5h13A2.5 2.5 0 0 1 21 7.5v11A2.5 2.5 0 0 1 18.5 21h-13A2.5 2.5 0 0 1 3 18.5v-11A2.5 2.5 0 0 1 5.5 5Z' stroke='${svgClr}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`;
+
+  const root = document.documentElement;
+  root.style.setProperty('--accent',       accentHex);
+  root.style.setProperty('--accent-light', `rgba(${ar},${ag},${ab},.14)`);
+  root.style.setProperty('--bg',      bgHex);
+  root.style.setProperty('--surface',  surface);
+  root.style.setProperty('--surface2', surface2);
+  root.style.setProperty('--surface3', surface3);
+  root.style.setProperty('--border',  `rgba(${ar},${ag},${ab},.17)`);
+  root.style.setProperty('--text',    textColor);
+  root.style.setProperty('--muted',   mutedColor);
+  root.style.colorScheme = isDark ? 'dark' : 'light';
+
+  // Dramatic gradient: two large radial glows + 4-stop diagonal linear
+  root.style.background = deepDark;
+  document.body.style.background = `
+    radial-gradient(ellipse 120% 75% at  4% -14%, rgba(${ar},${ag},${ab},.40)            0%, transparent 62%),
+    radial-gradient(ellipse  90% 65% at 98% 108%, rgba(${sh2.r},${sh2.g},${sh2.b},.32)  0%, transparent 60%),
+    linear-gradient(155deg, ${gradTop} 0%, ${bgHex} 32%, ${gradBot} 60%, ${deepDark} 100%)`;
+  document.body.style.backgroundAttachment = 'fixed';
+
+  // Cat-badge colours — keep semantic hues, flip lightness for light themes
+  const badges = isDark ? `
+    .cat-badge.mat  {background:rgba(255,188,90,.16)!important;color:#ffc36b!important}
+    .cat-badge.work {background:rgba(145,166,255,.16)!important;color:#aebcff!important}
+    .cat-badge.furn {background:rgba(255,142,190,.16)!important;color:#ffacd0!important}
+    .cat-badge.tech {background:rgba(92,221,198,.16)!important;color:#80ead8!important}
+    .cat-badge.other{background:rgba(${ar},${ag},${ab},.15)!important;color:${accentHex}!important}
+  ` : `
+    .cat-badge.mat  {background:rgba(200,118,10,.22)!important;color:#7a4200!important}
+    .cat-badge.work {background:rgba(75,95,215,.20)!important;color:#1b38a8!important}
+    .cat-badge.furn {background:rgba(200,55,128,.20)!important;color:#a01a64!important}
+    .cat-badge.tech {background:rgba(18,142,122,.20)!important;color:#096055!important}
+    .cat-badge.other{background:rgba(${ar},${ag},${ab},.20)!important;color:${accentHex}!important}
+  `;
+
+  let st = document.getElementById('theme-overrides');
+  if (!st) { st = document.createElement('style'); st.id = 'theme-overrides'; document.head.appendChild(st); }
+  st.textContent = `
+    ${badges}
+    .btn-add,.btn-auth{background:${accentHex}!important;color:${onAccent}!important;box-shadow:0 12px 30px rgba(${ar},${ag},${ab},.18)!important}
+    .stat-card.accent{background:linear-gradient(135deg,${accentHex} 0%,${acDark} 100%)!important;border-color:rgba(${ar},${ag},${ab},.7)!important}
+    .stat-card.accent .stat-label,.stat-card.accent .stat-value,.stat-card.accent .stat-sub{color:${onAccent}!important}
+    .filter-btn{background:${bgHex}!important}
+    .filter-btn.active,.filter-btn:hover{background:${accentHex}!important;border-color:${accentHex}!important;color:${onAccent}!important}
+    .sort-select{background-color:${bgHex}!important;background-image:${arrowSvg}!important}
+    .form-group select{background-image:${arrowSvg}!important}
+    .form-group input[type="date"]{background-image:${calSvg}!important;color-scheme:${isDark?'dark':'light'}!important}
+    .rate-tag{background:${surface}!important}
+    .btn-form-toggle{background:${surface}!important}
+    .btn-refresh,.btn-notifications,.btn-logout,.btn-theme,.header-icon{background:${bgDark}!important}
+    .form-group input,.form-group select,.auth-group input{background:${surface}!important}
+    .form-group input:focus,.form-group select:focus,.auth-group input:focus{background:${surface2}!important;border-color:rgba(${ar},${ag},${ab},.75)!important;box-shadow:0 0 0 4px rgba(${ar},${ag},${ab},.14)!important}
+    tbody tr:hover{background:rgba(${ar},${ag},${ab},.055)!important}
+    .toast{background:${accentHex}!important;color:${onAccent}!important}
+    .amount-eur,.card-eur,.total-eur{color:${accentHex}!important}
+    .rate-hint a,.auth-switch button{color:${accentHex}!important}
+    .btn-notifications.enabled{border-color:rgba(${ar},${ag},${ab},.55)!important;color:${accentHex}!important}
+    .btn-refresh.loading{color:${accentHex}!important}
+    .btn-form-toggle:hover,.btn-refresh:hover,.btn-notifications:hover,.btn-logout:hover,.btn-theme:hover{border-color:${accentHex}!important;color:${accentHex}!important}
+    .btn-theme-save{background:${accentHex}!important;color:${onAccent}!important}
+    .money-particle:not(.alt){color:${accentHex}!important}
+    .btn-del{color:${delColor}!important}
+    ::placeholder{color:${phColor}!important;opacity:1!important}
+    @keyframes filterPulse{0%{box-shadow:0 0 0 0 rgba(${ar},${ag},${ab},.35)}100%{box-shadow:0 0 0 10px rgba(${ar},${ag},${ab},0)}}
+  `;
+
+  currentThemeAccent = accentHex;
+  currentThemeBg = bgHex;
+}
+
+/* ── THEME PANEL UI ── */
+function _initThemePresets() {
+  const container = document.getElementById('theme-presets');
+  if (!container || container.children.length) return;
+  THEME_PRESETS.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'theme-preset';
+    btn.title = p.name;
+    btn.dataset.accent = p.accent;
+    btn.dataset.bg = p.bg;
+    btn.style.background = `linear-gradient(135deg, ${p.accent} 0%, ${p.bg} 100%)`;
+    btn.onclick = () => selectThemePreset(p.accent, p.bg);
+    container.appendChild(btn);
+  });
+}
+
+function openThemePanel() {
+  _initThemePresets();
+  const panel = document.getElementById('theme-panel');
+  const overlay = document.getElementById('theme-overlay');
+  document.getElementById('theme-accent-input').value = currentThemeAccent;
+  document.getElementById('theme-bg-input').value = currentThemeBg;
+  document.getElementById('theme-accent-hex').textContent = currentThemeAccent;
+  document.getElementById('theme-bg-hex').textContent = currentThemeBg;
+  _syncPresetHighlight(currentThemeAccent, currentThemeBg);
+  panel.hidden = false;
+  overlay.hidden = false;
+}
+
+function closeThemePanel() {
+  document.getElementById('theme-panel').hidden = true;
+  document.getElementById('theme-overlay').hidden = true;
+}
+
+function onThemeColorInput(type, value) {
+  const hexEl = document.getElementById(type === 'accent' ? 'theme-accent-hex' : 'theme-bg-hex');
+  hexEl.textContent = value;
+  const accent = type === 'accent' ? value : document.getElementById('theme-accent-input').value;
+  const bg     = type === 'bg'     ? value : document.getElementById('theme-bg-input').value;
+  applyTheme(accent, bg);
+  _syncPresetHighlight(accent, bg);
+}
+
+function selectThemePreset(accent, bg) {
+  document.getElementById('theme-accent-input').value = accent;
+  document.getElementById('theme-bg-input').value = bg;
+  document.getElementById('theme-accent-hex').textContent = accent;
+  document.getElementById('theme-bg-hex').textContent = bg;
+  applyTheme(accent, bg);
+  _syncPresetHighlight(accent, bg);
+}
+
+function _syncPresetHighlight(accent, bg) {
+  document.querySelectorAll('.theme-preset').forEach(el => {
+    el.classList.toggle('active', el.dataset.accent === accent && el.dataset.bg === bg);
+  });
+}
+
+async function saveTheme() {
+  const accent = document.getElementById('theme-accent-input').value;
+  const bg = document.getElementById('theme-bg-input').value;
+  applyTheme(accent, bg);
+
+  const saveBtn = document.getElementById('btn-theme-save');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Збереження…'; }
+
+  localStorage.setItem('theme-accent', accent);
+  localStorage.setItem('theme-bg', bg);
+
+  try {
+    const { error } = await withTimeout(
+      sb.auth.updateUser({ data: { theme_accent: accent, theme_bg: bg } }),
+      8000,
+      'Таймаут збереження теми'
+    );
+    if (error) console.warn('Theme save to DB failed:', error);
+  } catch (e) {
+    console.warn('Theme save to DB failed:', e);
+  }
+
+  if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Зберегти'; }
+  toast('✓ Тему збережено');
+  closeThemePanel();
+}
+
+function resetTheme() {
+  selectThemePreset(DEFAULT_ACCENT, DEFAULT_BG);
+}
+
+function loadUserTheme(session) {
+  const meta = session?.user?.user_metadata || {};
+  const accent = meta.theme_accent || localStorage.getItem('theme-accent');
+  const bg = meta.theme_bg || localStorage.getItem('theme-bg');
+  if (accent || bg) {
+    applyTheme(accent || DEFAULT_ACCENT, bg || DEFAULT_BG);
+  }
 }
 
 function isPushSupported() {
@@ -1747,6 +2321,12 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('focus', refreshAfterResume);
 window.addEventListener('pageshow', refreshAfterResume);
+window.addEventListener('online', () => {
+  if (currentSession?.user) loadExpenses().catch(console.error);
+});
+window.addEventListener('offline', () => {
+  showConnectionBanner(true);
+});
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('message', event => {
     if (event.data?.type === 'refresh-expenses') refreshAfterResume();
