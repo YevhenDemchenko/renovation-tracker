@@ -238,10 +238,28 @@
     flex-shrink: 0;
     transition: all .15s;
   }
+  .btn-export {
+    margin-left: 0;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: #0d1205;
+    cursor: pointer;
+    color: var(--text);
+    font-family: inherit;
+    flex-shrink: 0;
+    transition: all .15s;
+  }
   .btn-refresh:hover,
   .btn-notifications:hover,
   .btn-logout:hover,
+  .btn-export:hover,
   .btn-theme:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-export:disabled { opacity: .5; cursor: not-allowed; }
   .btn-notifications.enabled {
     border-color: rgba(165,238,48,.55);
     color: var(--accent);
@@ -761,7 +779,7 @@
     .desktop-table { display: none; }
     .mobile-list { display: block; }
     .btn-refresh { display: grid; }
-    .btn-refresh, .btn-notifications, .btn-theme {
+    .btn-refresh, .btn-notifications, .btn-theme, .btn-export {
       width: 28px;
       height: 28px;
       font-size: 14px;
@@ -971,6 +989,7 @@
       <p id="today-info">1 € = 51.62 ₴</p>
     </div>
     <button type="button" class="btn-theme" id="btn-theme" onclick="openThemePanel()" title="Змінити тему" aria-label="Змінити тему"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.1 0 2-.9 2-2 0-.52-.2-1-.51-1.34-.14-.17-.25-.32-.25-.66 0-.55.45-1 1-1H17c2.76 0 5-2.24 5-5 0-4.42-4.48-8-10-8z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><circle cx="6.5" cy="11.5" r="1.5" fill="currentColor"/><circle cx="9.5" cy="7.5" r="1.5" fill="currentColor"/><circle cx="14.5" cy="7.5" r="1.5" fill="currentColor"/><circle cx="17.5" cy="11.5" r="1.5" fill="currentColor"/></svg></button>
+    <button type="button" class="btn-export" id="btn-export" title="Експорт в Excel" aria-label="Експорт в Excel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v12m0 0-4-4m4 4 4-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <button type="button" class="btn-refresh" id="btn-refresh" title="Оновити дані" aria-label="Оновити дані">↻</button>
     <button type="button" class="btn-notifications" id="btn-notifications" title="Увімкнути сповіщення" aria-label="Увімкнути сповіщення">🔔</button>
     <button class="btn-logout" id="btn-logout">Вийти</button>
@@ -1553,6 +1572,85 @@ async function deleteExpense(id) {
   }
 }
 
+/* ── EXPORT TO EXCEL ── */
+const XLSX_CDN_URL = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+let xlsxLibPromise = null;
+
+function loadXlsxLib() {
+  if (window.XLSX) return Promise.resolve();
+  if (xlsxLibPromise) return xlsxLibPromise;
+
+  xlsxLibPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = XLSX_CDN_URL;
+    script.onload = () => resolve();
+    script.onerror = () => { xlsxLibPromise = null; reject(new Error('Не вдалося завантажити бібліотеку Excel')); };
+    document.head.appendChild(script);
+  });
+
+  return xlsxLibPromise;
+}
+
+async function exportToExcel() {
+  const btn = document.getElementById('btn-export');
+
+  if (!navigator.onLine) {
+    toast('Немає з’єднання з інтернетом 📵');
+    return;
+  }
+
+  const filtered = currentFilter === 'all' ? expenses : expenses.filter(e => e.cat === currentFilter);
+  const sorted = getSorted(filtered);
+
+  if (!sorted.length) {
+    toast('Немає витрат для експорту');
+    return;
+  }
+
+  if (btn) btn.disabled = true;
+
+  try {
+    await loadXlsxLib();
+
+    const rows = sorted.map(e => {
+      const cat = CAT_MAP[e.cat] || CAT_MAP.other;
+      const eur = Number(e.uah) / Number(e.rate);
+      return {
+        'Дата': fmtDate(e.date),
+        'Назва': e.name,
+        'Категорія': cat.label,
+        'Сума, ₴': Number(e.uah),
+        'Курс, ₴/€': Number(e.rate),
+        'Сума, €': Math.round(eur * 100) / 100
+      };
+    });
+
+    const totalUAH = sorted.reduce((s, e) => s + Number(e.uah), 0);
+    const totalEUR = sorted.reduce((s, e) => s + Number(e.uah) / Number(e.rate), 0);
+    rows.push({
+      'Дата': '',
+      'Назва': '',
+      'Категорія': 'Разом',
+      'Сума, ₴': Math.round(totalUAH * 100) / 100,
+      'Курс, ₴/€': '',
+      'Сума, €': Math.round(totalEUR * 100) / 100
+    });
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [{ wch: 12 }, { wch: 30 }, { wch: 16 }, { wch: 12 }, { wch: 12 }, { wch: 12 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Витрати');
+    XLSX.writeFile(wb, `витрати-ремонт-${getTodayDate()}.xlsx`);
+
+    toast('✅ Експортовано в Excel');
+  } catch (e) {
+    console.error(e);
+    toast(e?.message || 'Помилка експорту 😕');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
 /* ── UI HELPERS ── */
 function normalizeNumber(value) {
   return parseFloat(String(value).replace(',', '.'));
@@ -1705,7 +1803,7 @@ function applyTheme(accentHex, bgHex) {
     .form-group input[type="date"]{background-image:${calSvg}!important;color-scheme:${isDark?'dark':'light'}!important}
     .rate-tag{background:${surface}!important}
     .btn-form-toggle{background:${surface}!important}
-    .btn-refresh,.btn-notifications,.btn-logout,.btn-theme,.header-icon{background:${bgDark}!important}
+    .btn-refresh,.btn-notifications,.btn-logout,.btn-theme,.btn-export,.header-icon{background:${bgDark}!important}
     .form-group input,.form-group select,.auth-group input{background-color:${surface}!important}
     .form-group input:focus,.form-group select:focus,.auth-group input:focus{background-color:${surface2}!important;border-color:rgba(${ar},${ag},${ab},.75)!important;box-shadow:0 0 0 4px rgba(${ar},${ag},${ab},.14)!important}
     tbody tr:hover{background:rgba(${ar},${ag},${ab},.055)!important}
@@ -1714,7 +1812,7 @@ function applyTheme(accentHex, bgHex) {
     .rate-hint a,.auth-switch button{color:${accentHex}!important}
     .btn-notifications.enabled{border-color:rgba(${ar},${ag},${ab},.55)!important;color:${accentHex}!important}
     .btn-refresh.loading{color:${accentHex}!important}
-    .btn-form-toggle:hover,.btn-refresh:hover,.btn-notifications:hover,.btn-logout:hover,.btn-theme:hover{border-color:${accentHex}!important;color:${accentHex}!important}
+    .btn-form-toggle:hover,.btn-refresh:hover,.btn-notifications:hover,.btn-logout:hover,.btn-export:hover,.btn-theme:hover{border-color:${accentHex}!important;color:${accentHex}!important}
     .btn-theme-save{background:${accentHex}!important;color:${onAccent}!important}
     .money-particle:not(.alt){color:${accentHex}!important}
     .btn-del{color:${delColor}!important}
@@ -2295,6 +2393,7 @@ document.getElementById('auth-switch-link').addEventListener('click', switchTab)
 document.getElementById('auth-btn').addEventListener('click', authSubmit);
 document.getElementById('auth-email').addEventListener('keydown', e => { if (e.key === 'Enter') authSubmit(); });
 document.getElementById('auth-password').addEventListener('keydown', e => { if (e.key === 'Enter') authSubmit(); });
+document.getElementById('btn-export').addEventListener('click', exportToExcel);
 document.getElementById('btn-refresh').addEventListener('click', refreshData);
 document.getElementById('btn-notifications').addEventListener('click', enableNotifications);
 document.getElementById('btn-logout').addEventListener('click', logout);
